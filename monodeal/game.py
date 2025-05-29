@@ -1,19 +1,22 @@
 import random
-from .deck import DECK, Card, PropertyCard, PropertyColour, HouseCard, HotelCard, RENTS
+
+from .deck import DECK, HouseCard, HotelCard, RENTS
 from collections import deque
-from . import PlayerProto, Action, GameProto
-from typing import Sequence
+from . import (
+    PlayerProto,
+    Action,
+    GameProto,
+    Card,
+    PropertyColour,
+    PropertySetProto,
+    PropertyCard,
+)
+from typing import Sequence, Mapping, MutableSequence
+
+from .actions import PlayPropertyAction, SkipAction
 
 
-class SkipAction(Action):
-    def apply(self, g: GameProto) -> None:
-        pass
-
-    def action_count(self) -> int:
-        return 1
-
-
-class PropertySet:
+class PropertySet(PropertySetProto):
     def __init__(self, colour: PropertyColour):
         self.colour: PropertyColour = colour
         self.properties: list[PropertyCard] = []
@@ -37,6 +40,27 @@ class PropertySet:
         assert self.colour == card.colour
         self.properties.append(card)
 
+    # TODO: no hotel or house on utility or stations
+
+    def __len__(self) -> int:
+        return len(self.properties)
+
+    def __repr__(self) -> str:
+        return f"PS({self.colour.name},{','.join(p.name for p in self.properties)},{self.is_complete()})"
+
+
+def generate_actions(
+    game: GameProto, player: PlayerProto, actions_left: int
+) -> list[Action]:
+    actions: list[Action] = []
+    # opposition = game.get_opposition(player)
+
+    for c in player.get_hand():
+        if isinstance(c, PropertyCard):
+            actions.append(PlayPropertyAction(player=player, colour=c.colour, card=c))
+
+    return actions
+
 
 class Player(PlayerProto):
     def __init__(self, name: str) -> None:
@@ -46,21 +70,19 @@ class Player(PlayerProto):
         self.propertysets: dict[PropertyColour, PropertySet] = {}
 
     def deal_card(self, card: Card) -> None:
-        print(f"Player {self.name} recieved {card} into hand {self.hand}")
+        print(f"Player {self.name} recieved {card}")
         self.hand.append(card)
 
     def get_action(self, game: GameProto, actions_left: int) -> Action:
-        actions = self.generate_actions(game, actions_left)
-        if len(actions) > 1:
-            return actions[0]
-        else:
-            return SkipAction()
+        actions = generate_actions(game, self, actions_left)
+        actions.append(SkipAction(self))
+        return actions[0]
 
-    def generate_actions(self, game: GameProto, actions_left: int) -> list[Action]:
-        actions: list[Action] = []
-        for c in self.hand:
-            actions.extend(c.generate_moves_for(game, self, game.get_opposition(self)))
-        return actions
+    def get_hand(self) -> MutableSequence[Card]:
+        return self.hand
+
+    def get_property_sets(self) -> Mapping[PropertyColour, PropertySetProto]:
+        return self.propertysets
 
     def has_won(self) -> bool:
         complete_sets = 0
@@ -94,7 +116,7 @@ class Game(GameProto):
         self.discarded: deque[Card] = deque()
         self.random = random
 
-    def play(self) -> PlayerProto:
+    def _play(self) -> PlayerProto:
         ls = list(DECK)
         self.random.shuffle(ls)
         self.deck.extend(ls)
@@ -107,9 +129,12 @@ class Game(GameProto):
         # game loop
         while True:
             for p in self.players:
-                print("{p} ")
+                print(f"{p} go")
                 p.deal_card(self.deck.popleft())
                 p.deal_card(self.deck.popleft())
+                print(f"{p} has hand {p.hand}")
+                print(f"{p} has property {p.propertysets.values()}")
+
                 actions = 3
                 while actions > 0:
                     a = p.get_action(self, actions)
@@ -118,14 +143,29 @@ class Game(GameProto):
                     print(f"{p} does action {a}")
                     a.apply(self)
 
-                if p.has_won():
-                    print(f"{p} has won!")
-                    return p
+                    if p.has_won():
+                        print(f"{p} has won!")
+                        return p
 
                 while len(p.hand) > 7:
                     d = p.get_discard()
                     print(f"{p} discarded {d}")
                     self.discarded.append(d)
+
+    def play(self) -> PlayerProto:
+        try:
+            return self._play()
+        except:
+            print(f"deck: {self.deck}")
+            print(f"discarded: {self.discarded}")
+            for p in self.players:
+                print(p)
+                print(f"    hand: {p.hand}")
+                print("    property:")
+                for v in p.propertysets.values():
+                    print(f"      {v}")
+                print(f"    cash: {p.cash}")
+            raise
 
     def get_opposition(self, player: PlayerProto) -> Sequence[Player]:
         return [p for p in self.players if p != player]

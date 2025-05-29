@@ -1,32 +1,5 @@
-from enum import Flag, auto
 from typing import Sequence
-
-from . import Action, PlayerProto, GameProto
-
-
-class PropertyColour(Flag):
-    UTILITY = auto()
-    STATION = auto()
-    BROWN = auto()
-    PALEBLUE = auto()
-    ORANGE = auto()
-    MAGENTA = auto()
-    YELLOW = auto()
-    RED = auto()
-    GREEN = auto()
-    DARKBLUE = auto()
-    ALL = (
-        UTILITY
-        | STATION
-        | BROWN
-        | PALEBLUE
-        | ORANGE
-        | MAGENTA
-        | YELLOW
-        | RED
-        | GREEN
-        | DARKBLUE
-    )
+from . import Card, PropertyColour, PropertyCard
 
 
 RENTS: dict[PropertyColour, Sequence[int]] = {
@@ -41,26 +14,6 @@ RENTS: dict[PropertyColour, Sequence[int]] = {
     PropertyColour.GREEN: [2, 4, 7],
     PropertyColour.DARKBLUE: [3, 8],
 }
-
-
-class Card:
-    def __init__(self, cash: int):
-        self.cash = cash
-
-    def generate_moves_for(
-        self, game: GameProto, player: PlayerProto, opposition: Sequence[PlayerProto]
-    ) -> Sequence["Action"]:
-        return []
-
-
-class PropertyCard(Card):
-    def __init__(self, colour: PropertyColour, name: str, cash: int):
-        super().__init__(cash)
-        self.colour = colour
-        self.name = name
-
-    def __repr__(self) -> str:
-        return f"PropertyCard[{self.colour},{self.name}]"
 
 
 PROPERTY_DECK = [
