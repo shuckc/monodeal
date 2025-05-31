@@ -29,18 +29,19 @@ class PropertyColour(Flag):
 
 
 class Card:
-    def __init__(self, cash: int):
+    def __init__(self, cash: int, name: str):
         self.cash = cash
+        self.name = name
+
+    def __repr__(self) -> str:
+        return self.name
 
 
 class PropertyCard(Card):
     def __init__(self, colour: PropertyColour, name: str, cash: int):
-        super().__init__(cash)
         self.colour = colour
-        self.name = name
-
-    def __repr__(self) -> str:
-        return f"PropertyCard[{self.colour.name},{self.name!r}]"
+        self.property_name = name
+        super().__init__(cash, f"PropertyCard[{colour.name},{name!r}]")
 
 
 class PropertySetProto(Protocol):

@@ -1,5 +1,5 @@
 from typing import Sequence
-from . import Card, PropertyColour, PropertyCard
+from . import Card, PropertyColour as PC, PropertyColour, PropertyCard
 
 
 RENTS: dict[PropertyColour, Sequence[int]] = {
@@ -15,6 +15,16 @@ RENTS: dict[PropertyColour, Sequence[int]] = {
     PropertyColour.DARKBLUE: [3, 8],
 }
 
+ALLOWED_BUILDINGS = (
+    PC.BROWN
+    | PC.PALEBLUE
+    | PC.ORANGE
+    | PC.MAGENTA
+    | PC.YELLOW
+    | PC.RED
+    | PC.GREEN
+    | PC.DARKBLUE
+)
 
 PROPERTY_DECK = [
     PropertyCard(PropertyColour.UTILITY, "Water Works", 2),
@@ -50,12 +60,9 @@ PROPERTY_DECK = [
 
 class WildPropertyCard(Card):
     def __init__(self, colours: PropertyColour, cash: int):
-        super().__init__(cash)
+        super().__init__(cash, f"PropertyWildCard[{colours}]")
         self.colours = colours
         assert len(colours) > 1  # py3.11+
-
-    def __repr__(self) -> str:
-        return f"PropertyWildCard[{self.colours}]"
 
 
 # theres no wildcard for DARKBLUE
@@ -76,22 +83,16 @@ PROPERTY_WILDCARDS = [
 
 class RentCard(Card):
     def __init__(self, colours: PropertyColour, cash: int):
-        super().__init__(cash)
+        super().__init__(cash, f"RentCard[{colours}]")
         self.colours = colours
         self.all_players = True
-
-    def __repr__(self) -> str:
-        return f"RentCard[{self.colours}]"
 
 
 class RainbowRentCard(Card):
     def __init__(self, cash: int):
-        super().__init__(cash)
+        super().__init__(cash, "RainbowRendCard")
         self.colours = PropertyColour.ALL
         self.all_players = False
-
-    def __repr__(self) -> str:
-        return "RainbowRentCard[]"
 
 
 RENT_CARDS = [
@@ -106,10 +107,7 @@ RENT_CARDS = [
 
 class MoneyCard(Card):
     def __init__(self, cash: int):
-        super().__init__(cash)
-
-    def __repr__(self) -> str:
-        return f"MoneyCard[{self.cash}]"
+        super().__init__(cash, f"MoneyCard[{cash}]")
 
 
 MONEY_DECK = [
@@ -124,82 +122,52 @@ MONEY_DECK = [
 
 class PassGoCard(Card):
     def __init__(self) -> None:
-        super().__init__(1)
-
-    def __repr__(self) -> str:
-        return "PassGoCard"
+        super().__init__(1, "PassGoCard")
 
 
 class HouseCard(Card):
     def __init__(self) -> None:
-        super().__init__(3)
-
-    def __repr__(self) -> str:
-        return "HouseCard"
+        super().__init__(3, "HouseCard")
 
 
 class HotelCard(Card):
     def __init__(self) -> None:
-        super().__init__(4)
-
-    def __repr__(self) -> str:
-        return "HotelCard"
+        super().__init__(4, "HotelCard")
 
 
 class DoubleTheRentCard(Card):
     def __init__(self) -> None:
-        super().__init__(1)
-
-    def __repr__(self) -> str:
-        return "DoubleTheRentCard"
+        super().__init__(1, "DoubleTheRentCard")
 
 
 class BirthdayCard(Card):
     def __init__(self) -> None:
-        super().__init__(2)
-
-    def __repr__(self) -> str:
-        return "BirthdayCard"
+        super().__init__(2, "BirthdayCard")
 
 
 class ForcedDealCard(Card):
     def __init__(self) -> None:
-        super().__init__(3)
-
-    def __repr__(self) -> str:
-        return "ForcedDealCard"
+        super().__init__(3, "ForcedDealCard")
 
 
 class SlyDealCard(Card):
     def __init__(self) -> None:
-        super().__init__(3)
-
-    def __repr__(self) -> str:
-        return "SlyDealCard"
+        super().__init__(3, "SlyDealCard")
 
 
 class DealBreakerCard(Card):
     def __init__(self) -> None:
-        super().__init__(5)
-
-    def __repr__(self) -> str:
-        return "DealBreakerCard"
+        super().__init__(5, "DealBreakerCard")
 
 
 class DebtCollectorCard(Card):
     def __init__(self) -> None:
-        super().__init__(5)
-
-    def __repr__(self) -> str:
-        return "DebtCollectorCard"
+        super().__init__(5, "DebtCollectorCard")
 
 
 class JustSayNoCard(Card):
     def __init__(self) -> None:
-        super().__init__(3)
-
-    def __repr__(self) -> str:
-        return "JustSayNoCard"
+        super().__init__(3, "JustSayNoCard")
 
 
 ACTION_CARDS = [

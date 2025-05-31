@@ -1,6 +1,6 @@
 import random
 
-from .deck import DECK, HouseCard, HotelCard, RENTS
+from .deck import DECK, HouseCard, HotelCard, RENTS, ALLOWED_BUILDINGS
 from collections import deque
 from . import (
     PlayerProto,
