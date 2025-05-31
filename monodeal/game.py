@@ -13,53 +13,88 @@ from . import (
 )
 from typing import Sequence, Mapping, MutableSequence
 
-from .actions import PlayPropertyAction, SkipAction
+from .actions import SkipAction, generate_actions
 
 
 class PropertySet(PropertySetProto):
     def __init__(self, colour: PropertyColour):
         self.colour: PropertyColour = colour
         self.properties: list[PropertyCard] = []
-        self.hotel_card: HotelCard | None = None
-        self.house_card: HouseCard | None = None
+        self.hotel: HotelCard | None = None
+        self.house: HouseCard | None = None
         self.rents: Sequence[int] = RENTS[self.colour]
 
     def is_complete(self) -> bool:
         return len(self.rents) == len(self.properties)
 
-    def get_rent(self) -> int:
+    def rent_value(self) -> int:
         # TODO: hotel + house logic
-        base = self.rents[len(self.properties)]
-        if self.house_card:
+        if len(self.properties) == 0:
+            return 0
+        base = self.rents[len(self.properties) - 1]
+        if not self.is_complete():
+            return base
+        if self.house:
             base = base + 3
-        if self.hotel_card:
+        if self.hotel:
             base = base + 5
         return base
 
-    def add_property(self, card: PropertyCard) -> None:
-        assert self.colour == card.colour
-        self.properties.append(card)
+    def add_property(self, card: Card) -> None:
+        # TODO: no hotel or house on utility or stations
 
-    # TODO: no hotel or house on utility or stations
+        if isinstance(card, HouseCard):
+            assert self.colour in ALLOWED_BUILDINGS
+            assert self.house is None
+            assert self.is_complete()
+            self.house = card
+        elif isinstance(card, HotelCard):
+            assert self.colour in ALLOWED_BUILDINGS
+            assert self.house is not None
+            assert self.hotel is None
+            assert self.is_complete()
+            self.hotel = card
+        elif isinstance(card, PropertyCard):
+            assert card.colour == self.colour
+            self.properties.append(card)
+        else:
+            raise ValueError(card)
 
     def __len__(self) -> int:
         return len(self.properties)
 
     def __repr__(self) -> str:
-        return f"PS({self.colour.name},{','.join(p.name for p in self.properties)},{self.is_complete()})"
+        return f"PS({self.colour.name},{len(self.properties)}/{len(self.rents)},{','.join(p.property_name for p in self.properties)},{'+House' if self.house else '-'},{'+Hotel' if self.hotel else '-'})"
 
+    def remove(self, card: Card) -> None:
+        if isinstance(card, HouseCard):
+            assert self.house == card
+            self.house = None
+        elif isinstance(card, HotelCard):
+            assert self.hotel == card
+            self.hotel = None
+        elif isinstance(card, PropertyCard):
+            self.properties.remove(card)
+        else:
+            raise ValueError(card)
 
-def generate_actions(
-    game: GameProto, player: PlayerProto, actions_left: int
-) -> list[Action]:
-    actions: list[Action] = []
-    # opposition = game.get_opposition(player)
+    def cash_value(self) -> int:
+        value = sum(card.cash for card in self.properties)
+        if self.house:
+            value += self.house.cash
+        if self.hotel:
+            value += self.hotel.cash
+        return value
 
-    for c in player.get_hand():
-        if isinstance(c, PropertyCard):
-            actions.append(PlayPropertyAction(player=player, colour=c.colour, card=c))
-
-    return actions
+    def __copy__(self) -> "PropertySet":
+        c = PropertySet(self.colour)
+        for card in self.properties:
+            c.add_property(card)
+        if self.house:
+            c.add_property(self.house)
+        if self.hotel:
+            c.add_property(self.hotel)
+        return c
 
 
 class Player(PlayerProto):
@@ -122,7 +157,7 @@ class Game(GameProto):
         self.deck.extend(ls)
 
         # initial setup
-        for i in range(2):
+        for i in range(5):
             for p in self.players:
                 p.deal_card(self.deck.popleft())
 
