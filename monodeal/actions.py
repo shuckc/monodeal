@@ -1,5 +1,12 @@
-from . import Action, GameProto, PlayerProto, Card, PropertyColour, PropertyCard
-from .deck import RentCard, DoubleTheRentCard
+from . import (
+    Action,
+    GameProto,
+    PlayerProto,
+    Card,
+    PropertyColour,
+    PropertyCard,
+)
+from .deck import RentCard, DoubleTheRentCard, BirthdayCard
 from dataclasses import dataclass
 
 
@@ -51,3 +58,33 @@ class DoubleRentAction(CardAction):
 
     def apply(self, g: GameProto) -> None:
         return None
+
+
+class DepositAction(CardAction):
+    def apply(self, g: GameProto) -> None:
+        super().apply(g)
+        self.player.add_money(self.card)
+
+
+class BirthdayAction(CardAction):
+    # all other players must send us 2M
+    def apply(self, g: GameProto) -> None:
+        for p in g.get_opposition(self.player):
+            g.player_owes_money(p, self.player, 2)
+
+
+def generate_actions(
+    game: GameProto, player: PlayerProto, actions_left: int
+) -> list[Action]:
+    actions: list[Action] = []
+    # opposition = game.get_opposition(player)
+
+    for c in player.get_hand():
+        if isinstance(c, PropertyCard):
+            actions.append(PlayPropertyAction(player=player, colour=c.colour, card=c))
+        else:
+            actions.append(DepositAction(player=player, card=c))
+            if isinstance(c, BirthdayCard):
+                actions.append(BirthdayAction(player=player, card=c))
+
+    return actions

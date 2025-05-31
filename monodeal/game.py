@@ -119,6 +119,9 @@ class Player(PlayerProto):
     def get_property_sets(self) -> Mapping[PropertyColour, PropertySetProto]:
         return self.propertysets
 
+    def get_money_set(self) -> MutableSequence[Card]:
+        return self.cash
+
     def has_won(self) -> bool:
         complete_sets = 0
         for ps in self.propertysets.values():
@@ -140,6 +143,41 @@ class Player(PlayerProto):
             ps = PropertySet(colour)
             self.propertysets[colour] = ps
         ps.add_property(card)
+
+    def add_money(self, card: Card) -> None:
+        self.cash.append(card)
+
+    def get_money(self) -> int:
+        return sum(card.cash for card in self.cash)
+
+    def get_property_as_cash(self) -> int:
+        return sum(ps.cash_value() for ps in self.propertysets.values())
+
+    def choose_how_to_pay(self, amount: int) -> Sequence[Card]:
+        # if we have bank funds equal to amount, use that
+        total_cash = self.get_money() + self.get_property_as_cash()
+        to_pay = min(total_cash, amount)
+
+        # rank options by minimising (ps,rv,excess)
+        #   ps - reduction in complete property sets
+        #   rv - reduction in rental value
+        #   excess - cash sent above to_pay
+        # e.g. a spend of [1,3,10] [Green->[G,G,G,H,H], Red->[R]]
+        #  for a target to_pay=6 could be [3,R] at (0,2,0)
+        #        target to_pay=20 could be [10,3,1,H,H,R] (0,7,1)
+        #        target to_pay=22 could be [10,3,1,H,H,R,G] (1,9,0)
+        #
+        # order of cards does not matter
+
+        # cards: list[Card] = [*self.get_money_set()]
+        for ps in self.propertysets.values():
+            pass
+
+        for c in self.cash:
+            if c.cash == to_pay:
+                return [c]
+        # if we have one or more totalling, use that
+        return []
 
 
 class Game(GameProto):
@@ -204,6 +242,33 @@ class Game(GameProto):
 
     def get_opposition(self, player: PlayerProto) -> Sequence[Player]:
         return [p for p in self.players if p != player]
+
+    def player_owes_money(
+        self, from_player: PlayerProto, to_player: PlayerProto, amount: int
+    ) -> None:
+        cards: Sequence[Card] = from_player.choose_how_to_pay(amount)
+        amount_sent = sum(card.cash for card in cards)
+
+        for c in cards:
+            try:
+                from_player.get_money_set().remove(c)
+            except ValueError:
+                # must be a property card or property wild card
+                if isinstance(c, PropertyCard):
+                    from_player.get_property_sets()[c.colour].remove(c)
+                else:
+                    raise ValueError("not property card?")
+        if amount_sent < amount:
+            # check player has nothing left if underpaying
+            assert len(from_player.get_money_set()) == 0
+            for ps in from_player.get_property_sets():
+                assert len(ps) == 0
+
+        for c in cards:
+            if isinstance(c, PropertyCard):
+                to_player.add_property(c)
+            else:
+                to_player.add_money(c)
 
 
 class ConsolePlayer(Player):
