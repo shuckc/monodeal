@@ -2,8 +2,7 @@ from copy import copy
 
 import pytest
 
-from monodeal import PropertyCard, PropertyColour
-from monodeal.deck import HotelCard, HouseCard
+from monodeal import HotelCard, HouseCard, PropertyCard, PropertyColour
 from monodeal.game import PropertySet
 
 

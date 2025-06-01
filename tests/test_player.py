@@ -7,7 +7,7 @@ def test_haswon() -> None:
     assert not p.has_won()
 
     for prop in PROPERTY_DECK:
-        p.add_property(prop)
+        p.add_property(prop.colour, prop)
 
     assert len(p.propertysets) == 10
     first = next(iter(p.propertysets.values()))

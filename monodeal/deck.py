@@ -1,6 +1,6 @@
 from typing import Sequence
 
-from . import Card, PropertyCard, PropertyColour
+from . import Card, HotelCard, HouseCard, PropertyCard, PropertyColour, WildPropertyCard
 from . import PropertyColour as PC
 
 RENTS: dict[PropertyColour, Sequence[int]] = {
@@ -58,14 +58,6 @@ PROPERTY_DECK = [
     PropertyCard(PropertyColour.DARKBLUE, "Mayfair", 4),
 ]
 
-
-class WildPropertyCard(Card):
-    def __init__(self, colours: PropertyColour, cash: int):
-        super().__init__(cash, f"PropertyWildCard[{colours}]")
-        self.colours = colours
-        assert len(colours) > 1  # py3.11+
-
-
 # theres no wildcard for DARKBLUE
 PROPERTY_WILDCARDS = [
     WildPropertyCard(PropertyColour.ALL, 0),
@@ -91,7 +83,7 @@ class RentCard(Card):
 
 class RainbowRentCard(Card):
     def __init__(self, cash: int):
-        super().__init__(cash, "RainbowRendCard")
+        super().__init__(cash, "RainbowRentCard")
         self.colours = PropertyColour.ALL
         self.all_players = False
 
@@ -111,29 +103,15 @@ class MoneyCard(Card):
         super().__init__(cash, f"MoneyCard[{cash}]")
 
 
-MONEY_DECK = [
-    *[MoneyCard(1)] * 6,
-    *[MoneyCard(2)] * 5,
-    *[MoneyCard(3)] * 3,
-    *[MoneyCard(4)] * 3,
-    *[MoneyCard(5)] * 2,
-    MoneyCard(10),
-]
+MONEY_DECK = []
+for qty, val in (6, 1), (5, 2), (3, 3), (3, 4), (2, 5), (1, 10):
+    for i in range(qty):
+        MONEY_DECK.append(MoneyCard(val))
 
 
 class PassGoCard(Card):
     def __init__(self) -> None:
         super().__init__(1, "PassGoCard")
-
-
-class HouseCard(Card):
-    def __init__(self) -> None:
-        super().__init__(3, "HouseCard")
-
-
-class HotelCard(Card):
-    def __init__(self) -> None:
-        super().__init__(4, "HotelCard")
 
 
 class DoubleTheRentCard(Card):

@@ -1,37 +1,46 @@
+import copy
 import random
 from collections import deque
 from itertools import chain, combinations
-from typing import Iterable, Mapping, MutableSequence, Sequence, Tuple
+from typing import Iterable, Mapping, MutableSequence, Self, Sequence, Tuple
 
 from . import (
     Action,
     Card,
     GameProto,
+    HotelCard,
+    HouseCard,
     PlayerProto,
     PropertyCard,
     PropertyColour,
     PropertySetProto,
+    WildPropertyCard,
 )
 from .actions import SkipAction, generate_actions
-from .deck import ALLOWED_BUILDINGS, DECK, RENTS, HotelCard, HouseCard
+from .deck import ALLOWED_BUILDINGS, DECK, RENTS
 
 
 class PropertySet(PropertySetProto):
     def __init__(self, colour: PropertyColour):
         self.colour: PropertyColour = colour
         self.properties: list[PropertyCard] = []
+        self.wilds: list[WildPropertyCard] = []
         self.hotel: HotelCard | None = None
         self.house: HouseCard | None = None
         self.rents: Sequence[int] = RENTS[self.colour]
 
     def is_complete(self) -> bool:
-        return len(self.rents) == len(self.properties)
+        return len(self.rents) <= len(self.properties) + len(self.wilds)
+
+    def get_colour(self) -> PropertyColour:
+        return self.colour
 
     def rent_value(self) -> int:
         # TODO: hotel + house logic
-        if len(self.properties) == 0:
+        card_count = len(self.properties) + len(self.wilds)
+        if card_count == 0:
             return 0
-        base = self.rents[len(self.properties) - 1]
+        base = self.rents[min(card_count, len(self.rents)) - 1]
         if not self.is_complete():
             return base
         if self.house:
@@ -40,25 +49,29 @@ class PropertySet(PropertySetProto):
             base = base + 5
         return base
 
-    def add_property(self, card: Card) -> None:
+    def add_property(self, card: Card) -> Self:
         # TODO: no hotel or house on utility or stations
 
         if isinstance(card, HouseCard):
             assert self.colour in ALLOWED_BUILDINGS
-            assert self.house is None
             assert self.is_complete()
+            assert self.house is None
             self.house = card
         elif isinstance(card, HotelCard):
             assert self.colour in ALLOWED_BUILDINGS
+            assert self.is_complete()
             assert self.house is not None
             assert self.hotel is None
-            assert self.is_complete()
             self.hotel = card
         elif isinstance(card, PropertyCard):
             assert card.colour == self.colour
             self.properties.append(card)
+        elif isinstance(card, WildPropertyCard):
+            assert self.colour in card.colours
+            self.wilds.append(card)
         else:
             raise ValueError(card)
+        return self
 
     def __len__(self) -> int:
         return len(self.properties)
@@ -95,6 +108,21 @@ class PropertySet(PropertySetProto):
         if self.hotel:
             c.add_property(self.hotel)
         return c
+
+    def can_build_house(self) -> bool:
+        return (
+            self.is_complete()
+            and self.colour in ALLOWED_BUILDINGS
+            and self.house is None
+        )
+
+    def can_build_hotel(self) -> bool:
+        return (
+            self.is_complete()
+            and self.colour in ALLOWED_BUILDINGS
+            and self.house is not None
+            and self.hotel is None
+        )
 
 
 def cash_value(cards: Sequence[Card]) -> int:
@@ -164,12 +192,19 @@ class Player(PlayerProto):
     def __repr__(self) -> str:
         return f"Player {self.name}"
 
-    def add_property(self, card: PropertyCard) -> None:
-        colour = card.colour
+    def _get_or_create_ps(self, colour: PropertyColour) -> PropertySet:
         ps = self.propertysets.get(colour, None)
         if ps is None:
             ps = PropertySet(colour)
             self.propertysets[colour] = ps
+        return ps
+
+    def add_property(
+        self,
+        colour: PropertyColour,
+        card: PropertyCard | WildPropertyCard | HouseCard | HotelCard,
+    ) -> None:
+        ps = self._get_or_create_ps(colour)
         ps.add_property(card)
 
     def add_money(self, card: Card) -> None:
@@ -186,7 +221,7 @@ class Player(PlayerProto):
         total_cash = self.get_money()
         total_property = self.get_property_as_cash()
         to_pay = min(total_cash + total_property, amount)
-        print(f"{self} to_pay {to_pay}")
+        print(f"{self} to_pay {to_pay} from {self.cash}")
 
         # if we can pay this amount without dipping into property, do so
         if to_pay <= total_cash:
@@ -247,6 +282,29 @@ class Player(PlayerProto):
         # if we have one or more totalling, use that
         return []
 
+    def pick_colour_for_recieved_wildcard(
+        self, card: WildPropertyCard
+    ) -> PropertyColour:
+        # maxmimise increase in rv
+        best: PropertyColour | None = None
+        rv_incr = 0
+        for pc in card.colours:
+            if best is None:
+                best = pc
+            ps = self._get_or_create_ps(pc)
+            rv_base = ps.rent_value()
+            rv_new = copy.copy(ps).add_property(card).rent_value()
+            print(
+                f"{self} recieved {card} scoring {pc} takes rv from {rv_base} to {rv_new}"
+            )
+            if rv_new - rv_base > rv_incr:
+                rv_incr = rv_new - rv_base
+                best = pc
+        print(f"{self} chose {card} as {best} with rv_incr {rv_incr}")
+        if best is None:
+            raise ValueError(f"unable to choose property colour for {card}")
+        return best
+
 
 class Game(GameProto):
     def __init__(
@@ -297,6 +355,7 @@ class Game(GameProto):
         try:
             return self._play()
         except:
+            print("==== CRASHED - state was ====")
             print(f"deck: {self.deck}")
             print(f"discarded: {self.discarded}")
             for p in self.players:
@@ -328,15 +387,23 @@ class Game(GameProto):
                     raise ValueError("not property card?")
         if amount_sent < amount:
             # check player has nothing left if underpaying
-            assert len(from_player.get_money_set()) == 0
+            assert len(from_player.get_money_set()) == 0, (
+                "Player underpaid but has cash"
+            )
             for ps in from_player.get_property_sets():
-                assert len(ps) == 0
+                assert len(ps) == 0, "Player underpaid but has assets"
 
         for c in cards:
             if isinstance(c, PropertyCard):
-                to_player.add_property(c)
+                to_player.add_property(c.colour, c)
+            elif isinstance(c, WildPropertyCard):
+                colour = to_player.pick_colour_for_recieved_wildcard(c)
+                to_player.add_property(colour, c)
             else:
                 to_player.add_money(c)
+
+    def discard(self, card: Card) -> None:
+        self.discarded.append(card)
 
 
 class ConsolePlayer(Player):

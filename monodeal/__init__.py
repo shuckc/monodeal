@@ -44,11 +44,31 @@ class PropertyCard(Card):
         super().__init__(cash, f"PropertyCard[{colour.name},{name!r}]")
 
 
+class WildPropertyCard(Card):
+    def __init__(self, colours: PropertyColour, cash: int):
+        super().__init__(cash, f"PropertyWildCard[{colours}]")
+        self.colours = colours
+        assert len(colours) > 1  # py3.11+
+
+
+class HouseCard(Card):
+    def __init__(self) -> None:
+        super().__init__(3, "HouseCard")
+
+
+class HotelCard(Card):
+    def __init__(self) -> None:
+        super().__init__(4, "HotelCard")
+
+
 class PropertySetProto(Protocol):
     def is_complete(self) -> bool: ...
     def rent_value(self) -> int: ...
     def __len__(self) -> int: ...
     def remove(self, card: Card) -> None: ...
+    def can_build_house(self) -> bool: ...
+    def can_build_hotel(self) -> bool: ...
+    def get_colour(self) -> PropertyColour: ...
 
 
 class PlayerProto(Protocol):
@@ -58,9 +78,16 @@ class PlayerProto(Protocol):
     def get_property_sets(self) -> Mapping[PropertyColour, PropertySetProto]: ...
     def get_money(self) -> int: ...
     def get_money_set(self) -> MutableSequence[Card]: ...
-    def add_property(self, card: PropertyCard) -> None: ...
+    def add_property(
+        self,
+        colour: PropertyColour,
+        card: PropertyCard | WildPropertyCard | HouseCard | HotelCard,
+    ) -> None: ...
     def add_money(self, card: Card) -> None: ...
     def choose_how_to_pay(self, amount: int) -> Sequence[Card]: ...
+    def pick_colour_for_recieved_wildcard(
+        self, card: WildPropertyCard
+    ) -> PropertyColour: ...
 
 
 class GameProto(Protocol):
@@ -69,6 +96,7 @@ class GameProto(Protocol):
     def player_owes_money(
         self, from_player: PlayerProto, to_player: PlayerProto, amount: int
     ) -> None: ...
+    def discard(self, card: Card) -> None: ...
 
 
 @dataclass

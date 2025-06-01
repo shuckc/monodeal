@@ -1,5 +1,5 @@
 set -e
-ruff check .
+ruff check --fix .
 ruff format .
 mypy --strict .
 pytest -vv .

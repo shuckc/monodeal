@@ -75,12 +75,12 @@ def test_birthday_actions() -> None:
     p2.deal_card(b)
     actions = generate_actions(g, p2, 3)
     assert actions == [
-        DepositAction(player=p2, card=b),
+        # DepositAction(player=p2, card=b),
         BirthdayAction(player=p2, card=b),
     ]
     assert p1.get_money() == 1
     assert p2.get_money() == 0
-    actions[1].apply(g)
+    actions[0].apply(g)
 
     assert p1.get_money() == 0
     assert p2.get_money() == 1

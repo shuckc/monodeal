@@ -4,11 +4,26 @@ from . import (
     Action,
     Card,
     GameProto,
+    HotelCard,
+    HouseCard,
     PlayerProto,
     PropertyCard,
     PropertyColour,
+    WildPropertyCard,
 )
-from .deck import BirthdayCard, DoubleTheRentCard, RentCard
+from .deck import (
+    BirthdayCard,
+    DealBreakerCard,
+    DebtCollectorCard,
+    DoubleTheRentCard,
+    ForcedDealCard,
+    JustSayNoCard,
+    MoneyCard,
+    PassGoCard,
+    RainbowRentCard,
+    RentCard,
+    SlyDealCard,
+)
 
 
 @dataclass
@@ -29,16 +44,17 @@ class CardAction(Action):
 
     def apply(self, g: GameProto) -> None:
         self.player.get_hand().remove(self.card)
+        g.discard(self.card)
 
 
 @dataclass
 class PlayPropertyAction(CardAction):
     colour: PropertyColour
-    card: PropertyCard
+    card: PropertyCard | WildPropertyCard | HouseCard | HotelCard
 
     def apply(self, g: GameProto) -> None:
         super().apply(g)
-        self.player.add_property(self.card)
+        self.player.add_property(self.colour, self.card)
 
 
 class DoubleRentAction(CardAction):
@@ -70,8 +86,19 @@ class DepositAction(CardAction):
 class BirthdayAction(CardAction):
     # all other players must send us 2M
     def apply(self, g: GameProto) -> None:
+        super().apply(g)
         for p in g.get_opposition(self.player):
             g.player_owes_money(p, self.player, 2)
+
+
+@dataclass
+class DebtCollectorAction(CardAction):
+    # nominated player must send us 5M
+    opponent: PlayerProto
+
+    def apply(self, g: GameProto) -> None:
+        super().apply(g)
+        g.player_owes_money(self.opponent, self.player, 5)
 
 
 def generate_actions(
@@ -84,8 +111,62 @@ def generate_actions(
         if isinstance(c, PropertyCard):
             actions.append(PlayPropertyAction(player=player, colour=c.colour, card=c))
         else:
-            actions.append(DepositAction(player=player, card=c))
             if isinstance(c, BirthdayCard):
                 actions.append(BirthdayAction(player=player, card=c))
+            elif isinstance(c, DebtCollectorCard):
+                for op in game.get_opposition(player):
+                    actions.append(
+                        DebtCollectorAction(
+                            player=player,
+                            card=c,
+                            opponent=op,
+                        )
+                    )
+            elif isinstance(c, WildPropertyCard):
+                # one action for each possible colour
+                for col in c.colours:
+                    actions.append(
+                        PlayPropertyAction(player=player, colour=col, card=c)
+                    )
+            elif isinstance(c, MoneyCard):
+                actions.append(DepositAction(player=player, card=c))
+            elif isinstance(c, SlyDealCard):
+                pass
+            elif isinstance(c, SlyDealCard):
+                pass
+            elif isinstance(c, JustSayNoCard):
+                pass
+            elif isinstance(c, RentCard):
+                pass
+            elif isinstance(c, RainbowRentCard):
+                pass
+            elif isinstance(c, ForcedDealCard):
+                pass
+            elif isinstance(c, DoubleTheRentCard):
+                pass
+            elif isinstance(c, PassGoCard):
+                pass
+            elif isinstance(c, DealBreakerCard):
+                pass
+            elif isinstance(c, HouseCard):
+                for ps in player.get_property_sets().values():
+                    if ps.can_build_house():
+                        actions.append(
+                            PlayPropertyAction(
+                                player=player, card=c, colour=ps.get_colour()
+                            )
+                        )
+            elif isinstance(c, HotelCard):
+                for ps in player.get_property_sets().values():
+                    if ps.can_build_hotel():
+                        actions.append(
+                            PlayPropertyAction(
+                                player=player, card=c, colour=ps.get_colour()
+                            )
+                        )
+
+            else:
+                raise ValueError(c)
+                # actions.append(DepositAction(player=player, card=c))
 
     return actions
