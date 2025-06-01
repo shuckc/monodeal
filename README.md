@@ -40,8 +40,8 @@ Open topics:
 
 Other work
 ---
-This is quite OK:
-https://github.com/brylee123/MonopolyDeal/blob/master/init_deck.py
+* Rules etc https://monopolydealrules.com/index.php?page=cards#top
+* deck representation https://github.com/brylee123/MonopolyDeal/blob/master/init_deck.py
 
 Thoughts
 ----
