@@ -1,13 +1,14 @@
+from dataclasses import dataclass
+
 from . import (
     Action,
+    Card,
     GameProto,
     PlayerProto,
-    Card,
-    PropertyColour,
     PropertyCard,
+    PropertyColour,
 )
-from .deck import RentCard, DoubleTheRentCard, BirthdayCard
-from dataclasses import dataclass
+from .deck import BirthdayCard, DoubleTheRentCard, RentCard
 
 
 @dataclass

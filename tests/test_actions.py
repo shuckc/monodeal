@@ -1,12 +1,12 @@
-from monodeal.deck import PROPERTY_DECK, MONEY_DECK, BirthdayCard, MoneyCard
-from monodeal.game import Player, Game
+from monodeal import PropertyColour
 from monodeal.actions import (
+    BirthdayAction,
+    DepositAction,
     PlayPropertyAction,
     generate_actions,
-    DepositAction,
-    BirthdayAction,
 )
-from monodeal import PropertyColour
+from monodeal.deck import MONEY_DECK, PROPERTY_DECK, BirthdayCard, MoneyCard
+from monodeal.game import Game, Player
 
 
 def test_property_actions() -> None:

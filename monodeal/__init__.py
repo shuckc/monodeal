@@ -1,6 +1,6 @@
-from typing import Protocol, Sequence, Mapping, MutableSequence
 from dataclasses import dataclass
 from enum import Flag, auto
+from typing import Mapping, MutableSequence, Protocol, Sequence
 
 
 class PropertyColour(Flag):

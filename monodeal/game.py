@@ -1,19 +1,18 @@
 import random
-
-from .deck import DECK, HouseCard, HotelCard, RENTS, ALLOWED_BUILDINGS
 from collections import deque
+from typing import Mapping, MutableSequence, Sequence
+
 from . import (
-    PlayerProto,
     Action,
-    GameProto,
     Card,
+    GameProto,
+    PlayerProto,
+    PropertyCard,
     PropertyColour,
     PropertySetProto,
-    PropertyCard,
 )
-from typing import Sequence, Mapping, MutableSequence
-
 from .actions import SkipAction, generate_actions
+from .deck import ALLOWED_BUILDINGS, DECK, RENTS, HotelCard, HouseCard
 
 
 class PropertySet(PropertySetProto):

@@ -1,10 +1,10 @@
 from monodeal.deck import (
-    PROPERTY_DECK,
-    MONEY_DECK,
-    PROPERTY_WILDCARDS,
-    DECK,
-    RENT_CARDS,
     ACTION_CARDS,
+    DECK,
+    MONEY_DECK,
+    PROPERTY_DECK,
+    PROPERTY_WILDCARDS,
+    RENT_CARDS,
 )
 
 

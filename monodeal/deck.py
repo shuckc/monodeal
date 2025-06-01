@@ -1,6 +1,7 @@
 from typing import Sequence
-from . import Card, PropertyColour as PC, PropertyColour, PropertyCard
 
+from . import Card, PropertyCard, PropertyColour
+from . import PropertyColour as PC
 
 RENTS: dict[PropertyColour, Sequence[int]] = {
     PropertyColour.UTILITY: [1, 2],
