@@ -1,4 +1,4 @@
-from monodeal import PropertyCard, PropertyColour
+from monodeal import PropertyCard, PropertyColour, WildPropertyCard
 from monodeal.deck import PROPERTY_DECK, MoneyCard
 from monodeal.game import Player
 
@@ -140,3 +140,13 @@ def test_money_3_1_R_GG() -> None:
         cards = p.choose_how_to_pay(amount)
         print(f" {amount} {cards}")
         assert cards == exp[amount]
+
+
+def test_money_WPC() -> None:
+    p = Player("test")
+    pc1 = WildPropertyCard(PropertyColour.ALL, 0)
+    pc2 = PropertyCard(PropertyColour.BROWN, "Old Road", 1)
+    p.add_property(PropertyColour.RED, pc1)
+    p.add_property(PropertyColour.BROWN, pc2)
+    cards = p.choose_how_to_pay(5)
+    assert cards == [pc2]
