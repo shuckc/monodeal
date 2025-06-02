@@ -74,7 +74,12 @@ class PropertySet(PropertySetProto):
         return self
 
     def __len__(self) -> int:
-        return len(self.properties)
+        return (
+            len(self.properties)
+            + len(self.wilds)
+            + (1 if self.house else 0)
+            + (1 if self.hotel else 0)
+        )
 
     def __repr__(self) -> str:
         return f"PS({self.colour.name},{len(self.properties)}/{len(self.rents)},{','.join(p.property_name for p in self.properties)},{'+House' if self.house else '-'},{'+Hotel' if self.hotel else '-'})"
@@ -153,6 +158,7 @@ class Player(PlayerProto):
         self.hand: list[Card] = []
         self.cash: list[Card] = []
         self.propertysets: dict[PropertyColour, PropertySet] = {}
+        self.cards_to_ps: dict[Card, PropertySet] = {}
 
     def deal_card(self, card: Card) -> None:
         print(f"Player {self.name} recieved {card}")
@@ -206,9 +212,18 @@ class Player(PlayerProto):
     ) -> None:
         ps = self._get_or_create_ps(colour)
         ps.add_property(card)
+        self.cards_to_ps[card] = ps
 
     def add_money(self, card: Card) -> None:
         self.cash.append(card)
+
+    def remove(self, card: Card) -> None:
+        ps: PropertySet | None = self.cards_to_ps.get(card, None)
+        if ps:
+            ps.remove(card)
+            self.cards_to_ps.pop(card)
+        else:
+            self.cash.remove(card)
 
     def get_money(self) -> int:
         return cash_value(self.cash)
@@ -221,66 +236,72 @@ class Player(PlayerProto):
         total_cash = self.get_money()
         total_property = self.get_property_as_cash()
         to_pay = min(total_cash + total_property, amount)
-        print(f"{self} to_pay {to_pay} from {self.cash}")
+        print(f"{self} to_pay {to_pay} from {self.cash} and {self.propertysets}")
+        best: Sequence[Card] = []
+        cards = list(self.cash)
+        # includes_property = False
 
         # if we can pay this amount without dipping into property, do so
-        if to_pay <= total_cash:
-            # choose the least overpayment, preserving smallest value
-            # card in hand (to retain flexibility)
+        # since it makes the powerset much smaller
+        if to_pay > total_cash:
+            cards.extend(self.cards_to_ps.keys())
+        #    includes_property = True
 
-            sr_orig = smallest_cash_remaining_without(self.cash, [])
-            best: Sequence[Card] = []
-            least_overpayment = 9999
-            smallest_remain = 9999
-            for cs in card_powerset(self.cash):
-                cv = cash_value(cs)
-                overpay = cv - to_pay
-                if overpay >= 0:
-                    print(
-                        f"{self} checking {cs} with cv={cv} overpayment={overpay} [least ov {least_overpayment}]"
-                    )
-                    if overpay <= least_overpayment:
-                        print(" ** improves least_overpayment")
-
-                        # OK candidate
-                        sr = smallest_cash_remaining_without(self.cash, cs)
-                        if (
-                            sr <= smallest_remain and overpay == least_overpayment
-                        ) or overpay < least_overpayment:
-                            best = cs
-                            least_overpayment = overpay
-                            smallest_remain = sr
-                            # exit early if optimal
-                            if least_overpayment == 0 and smallest_remain == sr_orig:
-                                break
-            print(
-                f"{self} choose_how_to_pay() solver for {amount} (to_pay={to_pay}) chose {best} with overpayment {least_overpayment} sr {smallest_remain}"
-            )
-            return list(best)
-        # more complex search using property cards
+        # iterate over the powerset evaluating a metric for each
+        # solution with an overpay >= 0
         #
-        # rank options by minimising (ps,rv,sr,overpayment)
+        # rank options by minimising (ps,rv,sr,overpay)
         #   ps - reduction in complete property sets
         #   rv - reduction in rental value
         #   sr - smallest remaining cash card (as above)
-        #   overpayment - cash sent above to_pay
+        #   overpay - cash sent above to_pay
         # e.g. a spend of [1,3,10] [Green->[G,G,G,H,H], Red->[R]]
         #  for a target to_pay=6 could be [3,R] at (0,2,0)
         #        target to_pay=20 could be [10,3,1,H,H,R] (0,7,1)
         #        target to_pay=22 could be [10,3,1,H,H,R,G] (1,9,0)
         #
         # order of cards does not matter
-        complete, rv = self.get_complete_sets_rv()
 
-        # cards: list[Card] = [*self.get_money_set()]
-        for ps in self.propertysets.values():
-            pass
+        sr_orig = smallest_cash_remaining_without(cards, [])
+        ps_orig, rv_orig = self.get_complete_sets_rv()
 
-        for c in self.cash:
-            if c.cash == to_pay:
-                return [c]
-        # if we have one or more totalling, use that
-        return []
+        least_score = (9999, 0, 0, 0)
+
+        for cs in card_powerset(cards):
+            cv = cash_value(cs)
+            overpay = cv - to_pay
+            if overpay < 0:
+                continue
+
+            print(
+                f"{self} checking {cs} with cv={cv} overpayment={overpay} [least {least_score}]"
+            )
+            cs_props = [c for c in cs if c in self.cards_to_ps]
+            cs_cash = [c for c in cs if c not in self.cards_to_ps]
+
+            # calculate ps, rv, sr
+            ps = 0
+            rv = 0
+            sr = 0
+            score = (ps, rv, overpay, sr)
+
+            if score <= least_score:
+                print(" ** improves least_overpayment")
+
+                # OK candidate
+                sr = smallest_cash_remaining_without(self.cash, cs_cash)
+                score = (ps, rv, overpay, sr)
+
+                if score <= least_score:
+                    best = cs
+                    least_score = score
+                    # exit early if optimal
+                    if overpay == 0 and sr == sr_orig:
+                        break
+        print(
+            f"{self} choose_how_to_pay() solver for {amount} (to_pay={to_pay}) chose {best} with ps,rv,overpay,sr={least_score}"
+        )
+        return list(best)
 
     def pick_colour_for_recieved_wildcard(
         self, card: WildPropertyCard
@@ -377,14 +398,7 @@ class Game(GameProto):
         amount_sent = sum(card.cash for card in cards)
 
         for c in cards:
-            try:
-                from_player.get_money_set().remove(c)
-            except ValueError:
-                # must be a property card or property wild card
-                if isinstance(c, PropertyCard):
-                    from_player.get_property_sets()[c.colour].remove(c)
-                else:
-                    raise ValueError("not property card?")
+            from_player.remove(c)
         if amount_sent < amount:
             # check player has nothing left if underpaying
             assert len(from_player.get_money_set()) == 0, (

@@ -1,3 +1,4 @@
+from monodeal import PropertyCard, PropertyColour
 from monodeal.deck import PROPERTY_DECK, MoneyCard
 from monodeal.game import Player
 
@@ -74,6 +75,68 @@ def test_money_2_3_5_10() -> None:
         21: [mc10, mc5, mc3, mc2],
     }
     for amount in range(22):
+        cards = p.choose_how_to_pay(amount)
+        print(f" {amount} {cards}")
+        assert cards == exp[amount]
+
+
+def test_money_3_1_R() -> None:
+    p = Player("test")
+    p.add_money(mc3 := MoneyCard(3))
+    p.add_money(mc1 := MoneyCard(1))
+    pc1 = PropertyCard(PropertyColour.RED, "Red Property1", 3)
+    p.add_property(pc1.colour, pc1)
+    assert p.get_money() == 4
+    assert p.get_property_as_cash() == 3
+
+    # minimising overpayment only passes this test
+    exp = {
+        0: [],
+        1: [mc1],
+        2: [mc3],
+        3: [mc3],
+        4: [mc3, mc1],
+        5: [mc3, pc1],
+        6: [mc3, pc1],
+        7: [mc3, mc1, pc1],
+        8: [mc3, mc1, pc1],
+    }
+    for amount in range(9):
+        cards = p.choose_how_to_pay(amount)
+        print(f" {amount} {cards}")
+        assert cards == exp[amount]
+
+
+def test_money_3_1_R_GG() -> None:
+    p = Player("test")
+    p.add_money(mc3 := MoneyCard(3))
+    p.add_money(mc1 := MoneyCard(1))
+    pc1 = PropertyCard(PropertyColour.RED, "Red Property1", 3)
+    p.add_property(pc1.colour, pc1)
+    pc2 = PropertyCard(PropertyColour.GREEN, "Green Property1", 4)
+    p.add_property(pc2.colour, pc2)
+    pc3 = PropertyCard(PropertyColour.GREEN, "Green Property2", 4)
+    p.add_property(pc2.colour, pc3)
+    pc4 = PropertyCard(PropertyColour.GREEN, "Green Property3", 4)
+    p.add_property(pc2.colour, pc4)
+
+    assert p.get_money() == 4
+    assert p.get_property_as_cash() == 15
+
+    # minimising overpayment only passes this test
+    exp = {
+        0: [],
+        1: [mc1],
+        2: [mc3],
+        3: [mc3],
+        4: [mc3, mc1],
+        5: [mc3, pc1],
+        6: [mc3, pc1],
+        7: [mc3, mc1, pc1],
+        8: [mc3, mc1, pc1],
+        9: [mc3, mc1, pc2],
+    }
+    for amount in range(9):
         cards = p.choose_how_to_pay(amount)
         print(f" {amount} {cards}")
         assert cards == exp[amount]
