@@ -98,6 +98,7 @@ class PropertySet(PropertySetProto):
 
     def cash_value(self) -> int:
         value = sum(card.cash for card in self.properties)
+        value += sum(card.cash for card in self.wilds)
         if self.house:
             value += self.house.cash
         if self.hotel:
@@ -415,11 +416,10 @@ class Game(GameProto):
             from_player.remove(c)
         if amount_sent < amount:
             # check player has nothing left if underpaying
-            assert len(from_player.get_money_set()) == 0, (
-                "Player underpaid but has cash"
+            assert from_player.get_money() == 0, "Player underpaid but has cash"
+            assert from_player.get_property_as_cash() == 0, (
+                "Player underpaid but has assets"
             )
-            for ps in from_player.get_property_sets():
-                assert len(ps) == 0, "Player underpaid but has assets"
 
         for c in cards:
             if isinstance(c, PropertyCard):
