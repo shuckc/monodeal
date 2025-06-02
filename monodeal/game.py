@@ -236,7 +236,9 @@ class Player(PlayerProto):
         total_cash = self.get_money()
         total_property = self.get_property_as_cash()
         to_pay = min(total_cash + total_property, amount)
-        print(f"{self} to_pay {to_pay} from {self.cash} and {self.propertysets}")
+        print(
+            f"{self} choose_how_to_pay amount={amount} to_pay={to_pay} from {self.cash} and {','.join(str(x) for x in self.cards_to_ps.keys())}"
+        )
         best: Sequence[Card] = []
         cards = list(self.cash)
         # includes_property = False
@@ -244,7 +246,10 @@ class Player(PlayerProto):
         # if we can pay this amount without dipping into property, do so
         # since it makes the powerset much smaller
         if to_pay > total_cash:
-            cards.extend(self.cards_to_ps.keys())
+            for c in self.cards_to_ps.keys():
+                if isinstance(c, WildPropertyCard) and c.colours == PropertyColour.ALL:
+                    continue
+                cards.append(c)
         #    includes_property = True
 
         # iterate over the powerset evaluating a metric for each
