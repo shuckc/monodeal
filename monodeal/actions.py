@@ -107,6 +107,14 @@ class DebtCollectorAction(DiscardAction):
         g.player_owes_money(self.opponent, self.player, 5)
 
 
+@dataclass
+class PassGoAction(DiscardAction):
+    def apply(self, g: GameProto) -> None:
+        super().apply(g)
+        g.deal_to(self.player)
+        g.deal_to(self.player)
+
+
 def generate_actions(
     game: GameProto, player: PlayerProto, actions_left: int
 ) -> list[Action]:
@@ -151,7 +159,7 @@ def generate_actions(
             elif isinstance(c, DoubleTheRentCard):
                 pass
             elif isinstance(c, PassGoCard):
-                pass
+                actions.append(PassGoAction(player=player, card=c))
             elif isinstance(c, DealBreakerCard):
                 pass
             elif isinstance(c, HouseCard):

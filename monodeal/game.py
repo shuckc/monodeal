@@ -341,6 +341,14 @@ class Game(GameProto):
         self.discarded: deque[Card] = deque()
         self.random = random
 
+    def deal_to(self, p: PlayerProto) -> None:
+        if len(self.deck) == 0:
+            print(f"reshuffling {len(self.discarded)} dicarded cards")
+            self.deck.extend(self.discarded)
+            self.random.shuffle(self.deck)
+            self.discarded.clear()
+        p.deal_card(self.deck.popleft())
+
     def _play(self) -> PlayerProto:
         ls = list(DECK)
         self.random.shuffle(ls)
@@ -349,14 +357,15 @@ class Game(GameProto):
         # initial setup
         for i in range(5):
             for p in self.players:
-                p.deal_card(self.deck.popleft())
+                self.deal_to(p)
 
         # game loop
         while True:
             for p in self.players:
                 print(f"{p} go")
-                p.deal_card(self.deck.popleft())
-                p.deal_card(self.deck.popleft())
+                deal = 5 if len(p.get_hand()) == 0 else 2
+                for i in range(deal):
+                    self.deal_to(p)
                 print(f"{p} has hand {p.hand}")
                 print(f"{p} has property {p.propertysets.values()}")
 
