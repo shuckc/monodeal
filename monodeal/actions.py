@@ -58,6 +58,9 @@ class PlayPropertyAction(Action):
         self.player.get_hand().remove(self.card)
         self.player.add_property(self.colour, self.card)
 
+    def action_count(self) -> int:
+        return 1
+
 
 class DoubleRentAction(DiscardAction):
     def __init__(
@@ -81,7 +84,8 @@ class DoubleRentAction(DiscardAction):
 
 class DepositAction(DiscardAction):
     def apply(self, g: GameProto) -> None:
-        super().apply(g)
+        # move hand -> cash
+        self.player.get_hand().remove(self.card)
         self.player.add_money(self.card)
 
 
