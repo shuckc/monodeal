@@ -82,7 +82,7 @@ class PropertySet(PropertySetProto):
         )
 
     def __repr__(self) -> str:
-        return f"PS({self.colour.name},{len(self.properties)}/{len(self.rents)},{','.join(p.property_name for p in self.properties)},{'+House' if self.house else '-'},{'+Hotel' if self.hotel else '-'})"
+        return f"PS({self.colour.name},{len(self.properties)}/{len(self.rents)},{','.join(p.property_name for p in self.properties)},{','.join(p.name for p in self.wilds)},{'+House' if self.house else '-'},{'+Hotel' if self.hotel else '-'})"
 
     def remove(self, card: Card) -> None:
         if isinstance(card, HouseCard):
@@ -93,6 +93,8 @@ class PropertySet(PropertySetProto):
             self.hotel = None
         elif isinstance(card, PropertyCard):
             self.properties.remove(card)
+        elif isinstance(card, WildPropertyCard):
+            self.wilds.remove(card)
         else:
             raise ValueError(card)
 
@@ -108,11 +110,11 @@ class PropertySet(PropertySetProto):
     def __copy__(self) -> "PropertySet":
         c = PropertySet(self.colour)
         for card in self.properties:
-            c.add_property(card)
-        if self.house:
-            c.add_property(self.house)
-        if self.hotel:
-            c.add_property(self.hotel)
+            c.properties.append(card)
+        for wc in self.wilds:
+            c.wilds.append(wc)
+        c.house = self.house
+        c.hotel = self.hotel
         return c
 
     def can_build_house(self) -> bool:
@@ -168,6 +170,7 @@ class Player(PlayerProto):
     def get_action(self, game: GameProto, actions_left: int) -> Action:
         actions = generate_actions(game, self, actions_left)
         actions.append(SkipAction(self))
+        print(f"{self} considering {len(actions)} actions")
         return actions[0]
 
     def get_hand(self) -> MutableSequence[Card]:
