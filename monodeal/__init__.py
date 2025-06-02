@@ -88,6 +88,7 @@ class PlayerProto(Protocol):
     def pick_colour_for_recieved_wildcard(
         self, card: WildPropertyCard
     ) -> PropertyColour: ...
+    def remove(self, card: Card) -> None: ...
 
 
 class GameProto(Protocol):
