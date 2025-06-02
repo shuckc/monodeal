@@ -36,28 +36,30 @@ class SkipAction(Action):
 
 
 @dataclass
-class CardAction(Action):
+class DiscardAction(Action):
     card: Card
 
     def action_count(self) -> int:
         return 1
 
     def apply(self, g: GameProto) -> None:
+        # move card from hand to discard pile
         self.player.get_hand().remove(self.card)
         g.discard(self.card)
 
 
 @dataclass
-class PlayPropertyAction(CardAction):
-    colour: PropertyColour
+class PlayPropertyAction(Action):
     card: PropertyCard | WildPropertyCard | HouseCard | HotelCard
+    colour: PropertyColour
 
     def apply(self, g: GameProto) -> None:
-        super().apply(g)
+        # move from hand to property setsdoes
+        self.player.get_hand().remove(self.card)
         self.player.add_property(self.colour, self.card)
 
 
-class DoubleRentAction(CardAction):
+class DoubleRentAction(DiscardAction):
     def __init__(
         self,
         player: PlayerProto,
@@ -77,13 +79,13 @@ class DoubleRentAction(CardAction):
         return None
 
 
-class DepositAction(CardAction):
+class DepositAction(DiscardAction):
     def apply(self, g: GameProto) -> None:
         super().apply(g)
         self.player.add_money(self.card)
 
 
-class BirthdayAction(CardAction):
+class BirthdayAction(DiscardAction):
     # all other players must send us 2M
     def apply(self, g: GameProto) -> None:
         super().apply(g)
@@ -92,7 +94,7 @@ class BirthdayAction(CardAction):
 
 
 @dataclass
-class DebtCollectorAction(CardAction):
+class DebtCollectorAction(DiscardAction):
     # nominated player must send us 5M
     opponent: PlayerProto
 
