@@ -34,7 +34,8 @@ Player B has won!
 
 Open topics:
 * best discard and payment strategy to meet hand size or payment demand
-* optimise wildcards within property sets
+    * good insight at https://github.com/johnsears/monopoly-deal/blob/master/src/monopoly_deal/game.py#L227 : any superset of a viable payment set is worse than the original
+* optimise wildcards, house and hotels within property sets to maximise `rv` and `cps`
 * scoring and ordering actions
 
 

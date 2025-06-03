@@ -1,6 +1,6 @@
 import copy
 import random
-from collections import deque
+from collections import defaultdict, deque
 from itertools import chain, combinations
 from typing import Iterable, Mapping, MutableSequence, Self, Sequence, Tuple
 
@@ -137,6 +137,39 @@ def cash_value(cards: Sequence[Card]) -> int:
     return sum(card.cash for card in cards)
 
 
+class default_copydict(defaultdict[PropertySet, PropertySet]):
+    def __missing__(self, key: PropertySet) -> PropertySet:
+        value = copy.copy(key)
+        self[key] = value
+        return value
+
+
+def property_cps_rv_without(
+    pss: dict[Card, PropertySet], without: Sequence[Card]
+) -> Tuple[int, int]:
+    # precondition: each card in without should be in pss
+    sets: dict[Card, PropertySet] = {}
+    if without == []:
+        # optimisation if we do not need to remove any property
+        sets = pss
+    else:
+        remap: dict[PropertySet, PropertySet] = default_copydict()
+        for card, ps in pss.items():
+            ps_new = remap[ps]
+            sets[card] = ps_new
+            if card in without:
+                ps_new.remove(card)
+
+    complete_sets = 0
+    rent_value = 0
+    for ps in set(sets.values()):
+        if ps.is_complete():
+            complete_sets += 1
+        rent_value += ps.rent_value()
+
+    return complete_sets, rent_value
+
+
 def smallest_cash_remaining_without(
     cards: Sequence[Card], without: Sequence[Card]
 ) -> int:
@@ -179,21 +212,11 @@ class Player(PlayerProto):
     def get_property_sets(self) -> Mapping[PropertyColour, PropertySetProto]:
         return self.propertysets
 
-    def get_complete_sets_rv(self) -> Tuple[int, int]:
-        complete_sets = 0
-        rent_value = 0
-        for ps in self.propertysets.values():
-            if ps.is_complete():
-                complete_sets += 1
-            rent_value += ps.rent_value()
-
-        return complete_sets, rent_value
-
     def get_money_set(self) -> MutableSequence[Card]:
         return self.cash
 
     def has_won(self) -> bool:
-        complete_sets, _ = self.get_complete_sets_rv()
+        complete_sets, _ = property_cps_rv_without(self.cards_to_ps, [])
         return complete_sets >= 3
 
     def get_discard(self) -> Card:
@@ -259,11 +282,11 @@ class Player(PlayerProto):
         # iterate over the powerset evaluating a metric for each
         # solution with an overpay >= 0
         #
-        # rank options by minimising (ps,rv,sr,overpay)
-        #   ps - reduction in complete property sets
-        #   rv - reduction in rental value
-        #   sr - smallest remaining cash card (as above)
+        # rank options by minimising (cps,rv,sr,overpay)
+        #   cps - reduction in complete property sets
+        #   rv  - reduction in rental value
         #   overpay - cash sent above to_pay
+        #   sc  - smallest cash card
         # e.g. a spend of [1,3,10] [Green->[G,G,G,H,H], Red->[R]]
         #  for a target to_pay=6 could be [3,R] at (0,2,0)
         #        target to_pay=20 could be [10,3,1,H,H,R] (0,7,1)
@@ -271,8 +294,9 @@ class Player(PlayerProto):
         #
         # order of cards does not matter
 
-        sr_orig = smallest_cash_remaining_without(cards, [])
-        ps_orig, rv_orig = self.get_complete_sets_rv()
+        # baseline metrics, with all player's cards
+        sc_orig = smallest_cash_remaining_without(cards, [])
+        cps_orig, rv_orig = property_cps_rv_without(self.cards_to_ps, [])
 
         least_score = (9999, 0, 0, 0)
 
@@ -282,31 +306,33 @@ class Player(PlayerProto):
             if overpay < 0:
                 continue
 
-            print(
-                f"{self} checking {cs} with cv={cv} overpayment={overpay} [least {least_score}]"
-            )
+            # print(f"{self} checking {cs} with cv={cv} overpayment={overpay}")
             cs_props = [c for c in cs if c in self.cards_to_ps]
             cs_cash = [c for c in cs if c not in self.cards_to_ps]
 
-            # calculate ps, rv, sr
-            ps = 0
-            rv = 0
-            sr = 0
-            score = (ps, rv, overpay, sr)
+            # calculate cps, rv, sc
+            cps = cps_orig
+            rv = rv_orig
+            sc = sc_orig
+            if cs_props:
+                cps, rv = property_cps_rv_without(self.cards_to_ps, cs_props)
+            if cs_cash:
+                sc = smallest_cash_remaining_without(self.cash, cs_cash)
+
+            score = (cps_orig - cps, rv_orig - rv, overpay, sc - sc_orig)
+            print(
+                f"{self} scored {cs} with cv={cv} overpayment={overpay} as {score} vs. least {least_score}"
+            )
 
             if score <= least_score:
-                print(" ** improves least_overpayment")
+                print(f" ** improves score {score} < {least_score}")
 
                 # OK candidate
-                sr = smallest_cash_remaining_without(self.cash, cs_cash)
-                score = (ps, rv, overpay, sr)
-
-                if score <= least_score:
-                    best = cs
-                    least_score = score
-                    # exit early if optimal
-                    if overpay == 0 and sr == sr_orig:
-                        break
+                best = cs
+                least_score = score
+                # exit early if optimal
+                if overpay == 0 and sc == sc_orig and rv == rv_orig and cps == cps_orig:
+                    break
         print(
             f"{self} choose_how_to_pay() solver for {amount} (to_pay={to_pay}) chose {best} with ps,rv,overpay,sr={least_score}"
         )
@@ -413,10 +439,12 @@ class Game(GameProto):
         self, from_player: PlayerProto, to_player: PlayerProto, amount: int
     ) -> None:
         cards: Sequence[Card] = from_player.choose_how_to_pay(amount)
-        amount_sent = sum(card.cash for card in cards)
+        amount_sent = 0
 
         for c in cards:
             from_player.remove(c)
+            amount_sent += c.cash
+
         if amount_sent < amount:
             # check player has nothing left if underpaying
             assert from_player.get_money() == 0, "Player underpaid but has cash"
@@ -430,6 +458,10 @@ class Game(GameProto):
             elif isinstance(c, WildPropertyCard):
                 colour = to_player.pick_colour_for_recieved_wildcard(c)
                 to_player.add_property(colour, c)
+            elif isinstance(c, HotelCard):
+                raise ValueError()
+            elif isinstance(c, HouseCard):
+                raise ValueError()
             else:
                 to_player.add_money(c)
 
@@ -446,8 +478,9 @@ class RandomPlayer(Player):
 
 
 if __name__ == "__main__":
-    a: Player = ConsolePlayer("A")
-    b: Player = RandomPlayer("B")
-    g: Game = Game(players=[a, b])
-    winner = g.play()
-    print(winner)
+    for i in range(100):
+        a: Player = ConsolePlayer("A")
+        b: Player = RandomPlayer("B")
+        g: Game = Game(players=[a, b])
+        winner = g.play()
+        print(winner)
