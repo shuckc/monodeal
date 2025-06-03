@@ -116,9 +116,9 @@ def test_money_3_1_R_GG() -> None:
     pc2 = PropertyCard(PropertyColour.GREEN, "Green Property1", 4)
     p.add_property(pc2.colour, pc2)
     pc3 = PropertyCard(PropertyColour.GREEN, "Green Property2", 4)
-    p.add_property(pc2.colour, pc3)
+    p.add_property(pc3.colour, pc3)
     pc4 = PropertyCard(PropertyColour.GREEN, "Green Property3", 4)
-    p.add_property(pc2.colour, pc4)
+    p.add_property(pc4.colour, pc4)
 
     assert p.get_money() == 4
     assert p.get_property_as_cash() == 15
@@ -133,10 +133,12 @@ def test_money_3_1_R_GG() -> None:
         5: [mc3, pc1],
         6: [mc3, pc1],
         7: [mc3, mc1, pc1],
-        8: [mc3, mc1, pc1],
-        9: [mc3, mc1, pc2],
+        8: [mc3, mc1, pc4],
+        # for 9 is 1GG (cp=-1,rv=-5,op=0,-2) really better than 3RG (cp=-1,rv=-5,op=1,0) ??
+        9: [mc1, pc3, pc4],
+        10: [mc3, pc1, pc4],
     }
-    for amount in range(9):
+    for amount in range(11):
         cards = p.choose_how_to_pay(amount)
         print(f" {amount} {cards}")
         assert cards == exp[amount]
