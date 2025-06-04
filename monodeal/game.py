@@ -1,6 +1,7 @@
 import copy
 import random
 from collections import defaultdict, deque, Counter
+from enum import Flag, auto
 from itertools import chain, combinations
 from typing import Iterable, Mapping, MutableSequence, Self, Sequence, Tuple
 
@@ -192,6 +193,7 @@ class Player(PlayerProto):
         self.cash: list[Card] = []
         self.propertysets: dict[PropertyColour, PropertySet] = {}
         self.cards_to_ps: dict[Card, PropertySet] = {}
+        self.unallocated_buildings: list[HouseCard | HotelCard] = []
 
     def deal_card(self, card: Card) -> None:
         print(f"Player {self.name} recieved {card}")
@@ -241,11 +243,17 @@ class Player(PlayerProto):
     def add_money(self, card: Card) -> None:
         self.cash.append(card)
 
+    def add_unallocated_building(self, card: HouseCard | HotelCard) -> None:
+        self.unallocated_buildings.append(card)
+
     def remove(self, card: Card) -> None:
         ps: PropertySet | None = self.cards_to_ps.get(card, None)
         if ps:
             ps.remove(card)
             self.cards_to_ps.pop(card)
+        elif isinstance(card, HouseCard) or isinstance(card, HotelCard):
+            if card in self.unallocated_buildings:
+                self.unallocated_buildings.remove(card)
         else:
             self.cash.remove(card)
 
@@ -253,7 +261,9 @@ class Player(PlayerProto):
         return cash_value(self.cash)
 
     def get_property_as_cash(self) -> int:
-        return cash_value(self.cards_to_ps.keys())
+        return cash_value(self.cards_to_ps.keys()) + cash_value(
+            self.unallocated_buildings
+        )
 
     def choose_how_to_pay(self, amount: int) -> Sequence[Card]:
         # if we have bank funds equal to amount, use that
@@ -265,6 +275,9 @@ class Player(PlayerProto):
         )
         best: Sequence[Card] = []
         cards = list(self.cash)
+
+        if to_pay > cash_value(cards):
+            cards.extend(self.unallocated_buildings)
 
         # if we can pay this amount without dipping into property, do so
         # since it makes the powerset much smaller
@@ -317,7 +330,7 @@ class Player(PlayerProto):
 
             # print(f"{self} checking {cs} with cv={cv} overpayment={overpay}")
             cs_props = [c for c in cs if c in self.cards_to_ps]
-            cs_cash = [c for c in cs if c not in self.cards_to_ps]
+            cs_cash = [c for c in cs if c in self.cash]
 
             # calculate cps, rv, sc
             cps = cps_orig
@@ -350,6 +363,9 @@ class Player(PlayerProto):
     def pick_colour_for_recieved_wildcard(
         self, card: WildPropertyCard
     ) -> PropertyColour:
+        # TODO: consider putting recieved wildcard in an incomplete PS, moving it to complete a
+        # set only on our own turn, to avoid DealBreaker risk prior to our go?
+
         # maxmimise increase in rv
         best: PropertyColour | None = None
         rv_incr = 0
@@ -370,15 +386,47 @@ class Player(PlayerProto):
             raise ValueError(f"unable to choose property colour for {card}")
         return best
 
+    def pick_colour_for_recieved_building(
+        self, card: HouseCard | HotelCard
+    ) -> PropertyColour | None:
+        # maxmimise increase in rv, or leave unallocated if cannot yet be played
+        is_house = isinstance(card, HouseCard)
+
+        best: PropertyColour | None = None
+        rv_incr = 0
+        for pc in ALLOWED_BUILDINGS:
+            ps = self._get_or_create_ps(pc)
+            if (is_house and ps.can_build_house()) or (
+                not is_house and ps.can_build_hotel()
+            ):
+                rv_base = ps.rent_value()
+                rv_new = copy.copy(ps).add_property(card).rent_value()
+                print(
+                    f"{self} recieved {card} scoring {pc} takes rv from {rv_base} to {rv_new}"
+                )
+                if rv_new - rv_base > rv_incr:
+                    rv_incr = rv_new - rv_base
+                    best = pc
+        print(f"{self} chose {card} as {best} with rv_incr {rv_incr}")
+        return best
+
+
+class Variations(Flag):
+    FORCE_UNPLACED_PROPERTY_AS_CASH = auto()
+
 
 class Game(GameProto):
     def __init__(
-        self, players: list[Player] = [], random: random.Random = random.Random()
+        self,
+        players: list[Player] = [],
+        random: random.Random = random.Random(),
+        variations: Variations = Variations(0),
     ):
         self.players = players
         self.draw: deque[Card] = deque()
         self.discarded: deque[Card] = deque()
         self.random = random
+        self.variations = variations
 
     def deal_to(self, p: PlayerProto) -> None:
         if len(self.draw) == 0:
@@ -462,16 +510,27 @@ class Game(GameProto):
                 "Player underpaid but has assets"
             )
 
+        # TODO: to optimise the layout of recieved payment, report in order:
+        # 1) PropertyCard, 2) WildPropertyCard, 3) HouseCard, 4) HotelCard
         for c in cards:
             if isinstance(c, PropertyCard):
                 to_player.add_property(c.colour, c)
             elif isinstance(c, WildPropertyCard):
                 colour = to_player.pick_colour_for_recieved_wildcard(c)
                 to_player.add_property(colour, c)
-            elif isinstance(c, HotelCard):
-                raise ValueError()
-            elif isinstance(c, HouseCard):
-                raise ValueError()
+            elif isinstance(c, HouseCard) or isinstance(c, HotelCard):
+                optional_colour = to_player.pick_colour_for_recieved_building(c)
+                if optional_colour is not None:
+                    to_player.add_property(colour, c)
+                else:
+                    # VARIATION: where to store unallocated house/hotel?
+                    # storing in unallocated will trigger
+                    # calls to player.pick_colour_for_recieved_building() later
+                    if Variations.FORCE_UNPLACED_PROPERTY_AS_CASH in self.variations:
+                        to_player.add_money(c)
+                    else:
+                        to_player.add_unallocated_building(c)
+                        raise ValueError("store unallocated house/hotel?!")
             else:
                 to_player.add_money(c)
 
@@ -500,7 +559,9 @@ if __name__ == "__main__":
     for i in range(100):
         a: Player = ConsolePlayer("A")
         b: Player = RandomPlayer("B")
-        g: Game = Game(players=[a, b])
+        g: Game = Game(
+            players=[a, b], variations=Variations.FORCE_UNPLACED_PROPERTY_AS_CASH
+        )
         winner = g.play()
         print(winner)
         winners[winner.name] += 1
