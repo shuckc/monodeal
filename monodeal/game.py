@@ -356,24 +356,21 @@ class Game(GameProto):
         self, players: list[Player] = [], random: random.Random = random.Random()
     ):
         self.players = players
-        self.deck: deque[Card] = deque()
+        self.draw: deque[Card] = deque()
         self.discarded: deque[Card] = deque()
         self.random = random
 
     def deal_to(self, p: PlayerProto) -> None:
-        if len(self.deck) == 0:
-            print(f"reshuffling {len(self.discarded)} dicarded cards")
-            self.deck.extend(self.discarded)
-            self.random.shuffle(self.deck)
+        if len(self.draw) == 0:
+            print(f"reshuffling {len(self.discarded)} discarded cards")
+            self.draw.extend(self.discarded)
             self.discarded.clear()
-        p.deal_card(self.deck.popleft())
+            self.random.shuffle(self.draw)
+        p.deal_card(self.draw.popleft())
 
     def _play(self) -> PlayerProto:
-        ls = list(DECK)
-        self.random.shuffle(ls)
-        self.deck.extend(ls)
-
         # initial setup
+        self.discarded.extend(DECK)
         for i in range(5):
             for p in self.players:
                 self.deal_to(p)
@@ -414,7 +411,7 @@ class Game(GameProto):
             return self._play()
         except:
             print("==== CRASHED - state was ====")
-            print(f"deck: {self.deck}")
+            print(f"draw: {self.draw}")
             print(f"discarded: {self.discarded}")
             for p in self.players:
                 print(p)
@@ -462,7 +459,7 @@ class Game(GameProto):
         self.discarded.append(card)
 
     def audit(self) -> None:
-        cards = len(self.discarded) + len(self.deck)
+        cards = len(self.discarded) + len(self.draw)
         for player in self.players:
             cards += len(player.hand) + len(player.cash) + len(player.cards_to_ps)
         print(f"audit: {cards}")
