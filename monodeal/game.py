@@ -98,15 +98,6 @@ class PropertySet(PropertySetProto):
         else:
             raise ValueError(card)
 
-    def cash_value(self) -> int:
-        value = sum(card.cash for card in self.properties)
-        value += sum(card.cash for card in self.wilds)
-        if self.house:
-            value += self.house.cash
-        if self.hotel:
-            value += self.hotel.cash
-        return value
-
     def __copy__(self) -> "PropertySet":
         c = PropertySet(self.colour)
         for card in self.properties:
@@ -133,7 +124,7 @@ class PropertySet(PropertySetProto):
         )
 
 
-def cash_value(cards: Sequence[Card]) -> int:
+def cash_value(cards: Iterable[Card]) -> int:
     return sum(card.cash for card in cards)
 
 
@@ -256,7 +247,7 @@ class Player(PlayerProto):
         return cash_value(self.cash)
 
     def get_property_as_cash(self) -> int:
-        return sum(ps.cash_value() for ps in self.propertysets.values())
+        return cash_value(self.cards_to_ps.keys())
 
     def choose_how_to_pay(self, amount: int) -> Sequence[Card]:
         # if we have bank funds equal to amount, use that
@@ -268,7 +259,6 @@ class Player(PlayerProto):
         )
         best: Sequence[Card] = []
         cards = list(self.cash)
-        # includes_property = False
 
         # if we can pay this amount without dipping into property, do so
         # since it makes the powerset much smaller
@@ -277,7 +267,6 @@ class Player(PlayerProto):
                 if isinstance(c, WildPropertyCard) and c.colours == PropertyColour.ALL:
                     continue
                 cards.append(c)
-        #    includes_property = True
 
         # iterate over the powerset evaluating a metric for each
         # solution with an overpay >= 0
