@@ -2,7 +2,13 @@ from copy import copy
 
 import pytest
 
-from monodeal import HotelCard, HouseCard, PropertyCard, PropertyColour
+from monodeal import (
+    HotelCard,
+    HouseCard,
+    PropertyCard,
+    PropertyColour,
+    WildPropertyCard,
+)
 from monodeal.game import PropertySet
 
 
@@ -67,3 +73,32 @@ def test_property_set() -> None:
 
     assert not p2.is_complete()
     assert p2.rent_value() == 4
+
+
+def test_property_set_rainbow_wildcard_has_no_rent() -> None:
+    p = PropertySet(PropertyColour.GREEN)
+    assert p.rent_value() == 0
+
+    # stays at zero rent
+    p.add_property(WildPropertyCard(PropertyColour.ALL, 0))
+    assert p.rent_value() == 0
+
+    # jumps to 2 property rent
+    p.add_property(PropertyCard(PropertyColour.GREEN, "G1", 4))
+    assert p.rent_value() == 4
+
+
+def test_property_set_rainbow_wildcard_not_complete() -> None:
+    p = PropertySet(PropertyColour.BROWN)
+    assert p.rent_value() == 0
+
+    # stays incomplete
+    p.add_property(WildPropertyCard(PropertyColour.ALL, 0))
+    p.add_property(wpc1 := WildPropertyCard(PropertyColour.ALL, 0))
+    assert p.rent_value() == 0
+    assert not p.is_complete()
+
+    # one two-colour wildcard, one rainbow will complete
+    p.remove(wpc1)
+    p.add_property(WildPropertyCard(PropertyColour.BROWN | PropertyColour.PALEBLUE, 1))
+    assert p.is_complete()

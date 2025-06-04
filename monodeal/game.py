@@ -30,6 +30,9 @@ class PropertySet(PropertySetProto):
         self.rents: Sequence[int] = RENTS[self.colour]
 
     def is_complete(self) -> bool:
+        if len(self.properties) == 0:
+            if all(w.colours == PropertyColour.ALL for w in self.wilds):
+                return False
         return len(self.rents) <= len(self.properties) + len(self.wilds)
 
     def get_colour(self) -> PropertyColour:
@@ -40,6 +43,9 @@ class PropertySet(PropertySetProto):
         card_count = len(self.properties) + len(self.wilds)
         if card_count == 0:
             return 0
+        if len(self.properties) == 0:
+            if all(w.colours == PropertyColour.ALL for w in self.wilds):
+                return 0
         base = self.rents[min(card_count, len(self.rents)) - 1]
         if not self.is_complete():
             return base
