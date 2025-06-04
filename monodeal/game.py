@@ -262,11 +262,19 @@ class Player(PlayerProto):
 
         # if we can pay this amount without dipping into property, do so
         # since it makes the powerset much smaller
-        if to_pay > total_cash:
-            for c in self.cards_to_ps.keys():
-                if isinstance(c, WildPropertyCard) and c.colours == PropertyColour.ALL:
-                    continue
-                cards.append(c)
+        for include_complete in False, True:
+            if to_pay > cash_value(cards):
+                print(f"including complete: {include_complete}")
+                for c, ps in self.cards_to_ps.items():
+                    if (
+                        isinstance(c, WildPropertyCard)
+                        and c.colours == PropertyColour.ALL
+                    ):
+                        continue
+                    if ps.is_complete() == include_complete:
+                        cards.append(c)
+
+        assert len(set(cards)) == len(cards)
 
         # iterate over the powerset evaluating a metric for each
         # solution with an overpay >= 0
