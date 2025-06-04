@@ -1,11 +1,16 @@
-from monodeal import PropertyColour
+from monodeal import HotelCard, HouseCard, PropertyCard, PropertyColour
 from monodeal.actions import (
     BirthdayAction,
     DepositAction,
     PlayPropertyAction,
     generate_actions,
 )
-from monodeal.deck import MONEY_DECK, PROPERTY_DECK, BirthdayCard, MoneyCard
+from monodeal.deck import (
+    MONEY_DECK,
+    PROPERTY_DECK,
+    BirthdayCard,
+    MoneyCard,
+)
 from monodeal.game import Game, Player
 
 
@@ -84,3 +89,52 @@ def test_birthday_actions() -> None:
 
     assert p1.get_money() == 0
     assert p2.get_money() == 1
+
+
+def test_property_build_actions() -> None:
+    p = Player("test")
+    g = Game([p])
+
+    p0 = PropertyCard(PropertyColour.BROWN, "Old Kent Road", 1)
+    p1 = PropertyCard(PropertyColour.BROWN, "Whitechapel Road", 1)
+    p2 = HouseCard()
+    p3 = HotelCard()
+
+    p.deal_card(p0)
+    actions = generate_actions(g, p, 3)
+    assert actions == [
+        PlayPropertyAction(player=p, colour=PropertyColour.BROWN, card=p0)
+    ]
+    actions[0].apply(g)
+
+    ps0 = p.get_property_sets()[PropertyColour.BROWN]
+    assert len(ps0) == 1
+    assert not ps0.is_complete()
+
+    p.deal_card(p1)
+    p.deal_card(p2)
+    p.deal_card(p3)
+    actions = generate_actions(g, p, 3)
+    assert actions == [
+        PlayPropertyAction(player=p, colour=PropertyColour.BROWN, card=p1)
+    ]
+    actions[0].apply(g)
+
+    assert len(p.get_hand()) == 2
+    assert ps0.is_complete()
+    assert len(ps0) == 2
+
+    actions = generate_actions(g, p, 3)
+    assert actions == [
+        PlayPropertyAction(player=p, colour=PropertyColour.BROWN, card=p2)
+    ]
+    actions[0].apply(g)
+    assert len(ps0) == 3
+
+    actions = generate_actions(g, p, 3)
+    assert actions == [
+        PlayPropertyAction(player=p, colour=PropertyColour.BROWN, card=p3)
+    ]
+    actions[0].apply(g)
+    assert len(ps0) == 4
+    assert ps0.rent_value() == 10

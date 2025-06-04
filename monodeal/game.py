@@ -469,6 +469,7 @@ class Game(GameProto):
         self.discarded.append(card)
 
 
+
 class ConsolePlayer(Player):
     pass
 
