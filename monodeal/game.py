@@ -407,6 +407,8 @@ class Game(GameProto):
                     print(f"{p} does action {a}")
                     a.apply(self)
 
+                    self.audit()
+
                     if p.has_won():
                         print(f"{p} has won!")
                         return p
@@ -415,6 +417,8 @@ class Game(GameProto):
                     d = p.get_discard()
                     print(f"{p} discarded {d}")
                     self.discarded.append(d)
+
+                self.audit()
 
     def play(self) -> PlayerProto:
         try:
@@ -468,6 +472,12 @@ class Game(GameProto):
     def discard(self, card: Card) -> None:
         self.discarded.append(card)
 
+    def audit(self) -> None:
+        cards = len(self.discarded) + len(self.deck)
+        for player in self.players:
+            cards += len(player.hand) + len(player.cash) + len(player.cards_to_ps)
+        print(f"audit: {cards}")
+        assert cards == 106
 
 
 class ConsolePlayer(Player):

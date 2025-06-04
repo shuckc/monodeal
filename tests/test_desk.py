@@ -17,3 +17,6 @@ def test_deck() -> None:
     assert len(ACTION_CARDS) == 34
     # Package says contains 110 cards, however 4 are 'reference' instructional cards
     assert len(DECK) == 110 - 4
+
+    # trap any equals or duplicate members
+    assert len(set(DECK)) == 106
