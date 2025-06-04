@@ -1,6 +1,6 @@
 import copy
 import random
-from collections import defaultdict, deque
+from collections import defaultdict, deque, Counter
 from itertools import chain, combinations
 from typing import Iterable, Mapping, MutableSequence, Self, Sequence, Tuple
 
@@ -495,9 +495,13 @@ class RandomPlayer(Player):
 
 
 if __name__ == "__main__":
+    winners = Counter()
+
     for i in range(100):
         a: Player = ConsolePlayer("A")
         b: Player = RandomPlayer("B")
         g: Game = Game(players=[a, b])
         winner = g.play()
         print(winner)
+        winners[winner.name] += 1
+    print(winners)
