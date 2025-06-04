@@ -54,7 +54,7 @@ class PlayPropertyAction(Action):
     colour: PropertyColour
 
     def apply(self, g: GameProto) -> None:
-        # move from hand to property setsdoes
+        # move from hand to property sets
         self.player.get_hand().remove(self.card)
         self.player.add_property(self.colour, self.card)
 
@@ -144,8 +144,6 @@ def generate_actions(
                     )
             elif isinstance(c, MoneyCard):
                 actions.append(DepositAction(player=player, card=c))
-            elif isinstance(c, SlyDealCard):
-                pass
             elif isinstance(c, SlyDealCard):
                 pass
             elif isinstance(c, JustSayNoCard):
