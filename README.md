@@ -43,31 +43,31 @@ Edge Cases
 The official rules seem silent on a number of issues:
 
 * If a player without a complete property set recieves a house or hotel as incoming payment, where does the house/hotel card go? There seem to be three resonable choices:
-    a) card is placed in the cash pile, and has now lost it's special property-card handling
-    b) card can be placed on an incomplete property set, but does not count for rent calculation purposes until completed
-    c) card is placed as property, but not in a specific property set. The player can 'allocate' this at a later time to a complete property set
+    1) card is placed in the cash pile, and has now lost it's special property-card handling
+    1) card can be placed on an incomplete property set, but does not count for rent calculation purposes until completed
+    1) card is placed as property, but not in a specific property set. The player can 'allocate' this at a later time to a complete property set
 * Can a player move house/hotel cards between property sets? If so, when, and is this an action for the 3-actions rule? If this is allowed, then a player with multiple complete property sets can, with one house and hotel, move them between sets before charging rent. ie. effectively the Player has a house/hotel "globally" for rent optimisation rather than fixing them to a particular property set. This seems at odds with the DealBreaker's action to take a complete property set with any house/hotel cards.
-    a) house/hotel can not be moved once played into a property set
-    b) house/hotel can be moved to another complete PS, like a wildcard, before any player action.
-    c) house/hotel cards can be moved, at the cost of 1 action
+    1) house/hotel can not be moved once played into a property set
+    1) house/hotel can be moved to another complete PS, like a wildcard, before any player action.
+    1) house/hotel cards can be moved, at the cost of 1 action
 * If the deck is exhausted during play, does the discard pile get shuffled to become the new deck?
 * Holding 'extra' property of a colour due to wildcards: If we hold all 3 Green PropertyCards, plus a Blue/Green WildPropertyCard played as Green, how is this represented?
-    a) one Green Property Sets containing 4 cards, which is 'complete' (for winning purposes) with base rent capped at the maximum value for the colour (ie. the 4th card only contirbutes cash value).
-    b) two Green Property Sets, one of 3 cards (complete), one of 1 card (incomplete). The incomplete set is vulnerable to SlyDeal / ForcedDeal actions, and the complete set vulnerable to the DealBreaker action. Rent could be charged on either set (although sub-optimally on the smaller).
-    c) two green property sets (as b) however a Green Rent card collects rents for *both* property sets
+    1) one Green Property Sets containing 4 cards, which is 'complete' (for winning purposes) with base rent capped at the maximum value for the colour (ie. the 4th card only contirbutes cash value).
+    1) two Green Property Sets, one of 3 cards (complete), one of 1 card (incomplete). The incomplete set is vulnerable to SlyDeal / ForcedDeal actions, and the complete set vulnerable to the DealBreaker action. Rent could be charged on either set (although sub-optimally on the smaller).
+    1) two green property sets (as b) however a Green Rent card collects rents for *both* property sets
 * Merging of separate propertysets: Per (b) above. If I have a Brown card, and the use DealBreaker to aquire a set of Brown+Wildcard(Brown) from another player, treating these as separate sets. If I then flip the WildPropertyCard from Brown to PaleBlue, can and how do the orphaned two Brown cards get combined?
 * Forfeiting Buildings:  The rules (for house and hotel cards) state "If the property set they're on becomes incomplete, discard them". However since houses and hotels are only placed on complete property sets, and complete sets are immune from SlyDeal / ForcedDealCard actions, this could only happen due to:
-    a) the decision to settle a debt with a property card from a complete set, In doing this the player pays the cash value of the lost property to the opposition, and forfeits the house/hotel cash value to the discard pile. I can't see this ever being a better strategic option than paying with the house or hotel.
-    b) re-allocating a WildPropertyCard to another colour, before replacing it with another matching colour from the hand. (See the point on holding extra property in a set above - as this rule interacts with that).
-    c) It seems earlier instructions moved forfeited house/hotel cards to the player's bank rather than the discard pile
+    1) the decision to settle a debt with a property card from a complete set, In doing this the player pays the cash value of the lost property to the opposition, and forfeits the house/hotel cash value to the discard pile. I can't see this ever being a better strategic option than paying with the house or hotel.
+    1) re-allocating a WildPropertyCard to another colour, before replacing it with another matching colour from the hand. (See the point on holding extra property in a set above - as this rule interacts with that).
+    1) It seems earlier instructions moved forfeited house/hotel cards to the player's bank rather than the discard pile
 * Quadruple rent: Playing two DoubleTheRent cards simultaniously:
-    a) allowed: this uses all 3 actions of the player's go, and charges 4x the property set's rent
-    b) invalid - only one DTR card may be played on per Rent card
+    1) allowed: this uses all 3 actions of the player's go, and charges 4x the property set's rent
+    1) invalid - only one DTR card may be played on per Rent card
 
 * Use a ForcedDeal to push a card (G) to a player (with GG) to complete a set, so that a DealBreaker can then be played to capture the full set (GGG):
-    a) seems fine to me!
+    1) seems fine to me!
 * Play a JustSayNo card against a rent claim that has no cost to a player with no property/cash in order to empty the hand so that 5 cards are recieved on the next round.
-    a) seems fine to me!
+    1) seems fine to me!
 
 Some of these are from https://boardgamegeek.com/thread/375594/rules-clarification/page/1
 
