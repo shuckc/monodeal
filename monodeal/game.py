@@ -288,12 +288,18 @@ class Player(PlayerProto):
         cps_orig, rv_orig = property_cps_rv_without(self.cards_to_ps, [])
 
         least_score = (9999, 0, 0, 0)
+        valid_minimal_sets: list[set[Card]] = []
 
         for cs in card_powerset(cards):
             cv = cash_value(cs)
             overpay = cv - to_pay
             if overpay < 0:
                 continue
+
+            # if a subset of this combination was viable, this set is strictly worse, skip eval
+            if any(ms.issubset(cs) for ms in valid_minimal_sets):
+                continue
+            valid_minimal_sets.append(set(cs))
 
             # print(f"{self} checking {cs} with cv={cv} overpayment={overpay}")
             cs_props = [c for c in cs if c in self.cards_to_ps]
