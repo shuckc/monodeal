@@ -82,7 +82,7 @@ class PropertySet(PropertySetProto):
         )
 
     def __repr__(self) -> str:
-        return f"PS({self.colour.name},{len(self.properties)}/{len(self.rents)},{','.join(p.property_name for p in self.properties)},{','.join(p.name for p in self.wilds)},{'+House' if self.house else '-'},{'+Hotel' if self.hotel else '-'})"
+        return f"PS({self.colour.name},{len(self.properties) + len(self.wilds)}/{len(self.rents)},{','.join(p.property_name for p in self.properties)},{','.join(p.name for p in self.wilds)},{'+House' if self.house else '-'},{'+Hotel' if self.hotel else '-'})"
 
     def remove(self, card: Card) -> None:
         if isinstance(card, HouseCard):
