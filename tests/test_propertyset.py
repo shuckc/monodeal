@@ -80,6 +80,7 @@ def test_property_set_rainbow_wildcard_has_no_rent() -> None:
     assert p.rent_value() == 0
 
     # stays at zero rent
+    # https://hasbro-new.custhelp.com/app/answers/detail/a_id/941
     p.add_property(WildPropertyCard(PropertyColour.ALL, 0))
     assert p.rent_value() == 0
 
@@ -92,6 +93,7 @@ def test_property_set_rainbow_wildcard_not_complete() -> None:
     p = PropertySet(PropertyColour.BROWN)
     assert p.rent_value() == 0
 
+    # https://hasbro-new.custhelp.com/app/answers/detail_uk/a_id/942/
     # stays incomplete
     p.add_property(WildPropertyCard(PropertyColour.ALL, 0))
     p.add_property(wpc1 := WildPropertyCard(PropertyColour.ALL, 0))
