@@ -45,8 +45,8 @@ class PropertySet(PropertySetProto):
             return base
         if self.house:
             base = base + 3
-        if self.hotel:
-            base = base + 5
+            if self.hotel:
+                base = base + 5
         return base
 
     def add_property(self, card: Card) -> Self:
