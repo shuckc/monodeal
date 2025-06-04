@@ -89,12 +89,12 @@ class RainbowRentCard(Card):
 
 
 RENT_CARDS = [
-    *[RentCard(PropertyColour.BROWN | PropertyColour.PALEBLUE, 1)] * 2,
-    *[RentCard(PropertyColour.MAGENTA | PropertyColour.ORANGE, 1)] * 2,
-    *[RentCard(PropertyColour.RED | PropertyColour.YELLOW, 1)] * 2,
-    *[RentCard(PropertyColour.GREEN | PropertyColour.DARKBLUE, 1)] * 2,
-    *[RentCard(PropertyColour.STATION | PropertyColour.UTILITY, 1)] * 2,
-    *[RainbowRentCard(3)] * 3,
+    *[RentCard(PropertyColour.BROWN | PropertyColour.PALEBLUE, 1) for _ in range(2)],
+    *[RentCard(PropertyColour.MAGENTA | PropertyColour.ORANGE, 1) for _ in range(2)],
+    *[RentCard(PropertyColour.RED | PropertyColour.YELLOW, 1) for _ in range(2)],
+    *[RentCard(PropertyColour.GREEN | PropertyColour.DARKBLUE, 1) for _ in range(2)],
+    *[RentCard(PropertyColour.STATION | PropertyColour.UTILITY, 1) for _ in range(2)],
+    *[RainbowRentCard(3) for _ in range(3)],
 ]
 
 
@@ -150,16 +150,16 @@ class JustSayNoCard(Card):
 
 
 ACTION_CARDS = [
-    *[PassGoCard()] * 10,
-    *[HotelCard()] * 2,
-    *[HouseCard()] * 3,
-    *[DoubleTheRentCard()] * 2,
-    *[BirthdayCard()] * 3,
-    *[ForcedDealCard()] * 3,
-    *[SlyDealCard()] * 3,
-    *[DealBreakerCard()] * 2,
-    *[DebtCollectorCard()] * 3,
-    *[JustSayNoCard()] * 3,
+    *[PassGoCard() for _ in range(10)],
+    *[HotelCard() for _ in range(2)],
+    *[HouseCard() for _ in range(3)],
+    *[DoubleTheRentCard() for _ in range(2)],
+    *[BirthdayCard() for _ in range(3)],
+    *[ForcedDealCard() for _ in range(3)],
+    *[SlyDealCard() for _ in range(3)],
+    *[DealBreakerCard() for _ in range(2)],
+    *[DebtCollectorCard() for _ in range(3)],
+    *[JustSayNoCard() for _ in range(3)],
 ]
 
 DECK = MONEY_DECK + PROPERTY_DECK + PROPERTY_WILDCARDS + RENT_CARDS + ACTION_CARDS
