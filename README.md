@@ -1,3 +1,5 @@
+![Python versions](https://img.shields.io/pypi/pyversions/monodeal.svg) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/shuckc/monodeal/check.yml) [![PyPI version](https://badge.fury.io/py/monodeal.svg)](https://badge.fury.io/py/monodeal)
+
 Monopoly Deal (card game) simulator in python
 =====
 
