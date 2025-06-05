@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Sequence, TypeVar
 
 from . import (
     Action,
@@ -9,6 +10,7 @@ from . import (
     PlayerProto,
     PropertyCard,
     PropertyColour,
+    PropertySetProto,
     WildPropertyCard,
 )
 from .deck import (
@@ -62,23 +64,39 @@ class PlayPropertyAction(Action):
         return 1
 
 
-class DoubleRentAction(DiscardAction):
-    def __init__(
-        self,
-        player: PlayerProto,
-        card: RentCard,
-        colour: PropertyColour,
-        doublerent: DoubleTheRentCard,
-    ):
-        self.colour = colour
-        self.doublerentcard = doublerent
-        self.rentcard = card
-        super().__init__(player, card)
+@dataclass
+class RentAction(DiscardAction):
+    propertyset: PropertySetProto
+    doublerent: DoubleTheRentCard | None
+    quadrent: DoubleTheRentCard | None
+    target: PlayerProto | None
 
     def action_count(self) -> int:
-        return 2
+        return (
+            1
+            + (0 if self.doublerent is None else 1)
+            + (0 if self.quadrent is None else 1)
+        )
 
     def apply(self, g: GameProto) -> None:
+        rent = self.propertyset.rent_value()
+        rent *= 1 if self.doublerent is None else 2
+        rent *= 1 if self.quadrent is None else 2
+        rent_target = (
+            [self.target] if self.target is not None else g.get_opposition(self.player)
+        )
+
+        for p in rent_target:
+            g.player_owes_money(p, self.player, rent)
+
+        # discard multiple cards
+        s = set([self.card, self.doublerent, self.quadrent])
+        for card in s:
+            if card is None:
+                continue
+            self.player.get_hand().remove(card)
+            g.discard(card)
+
         return None
 
 
@@ -100,11 +118,11 @@ class BirthdayAction(DiscardAction):
 @dataclass
 class DebtCollectorAction(DiscardAction):
     # nominated player must send us 5M
-    opponent: PlayerProto
+    target: PlayerProto
 
     def apply(self, g: GameProto) -> None:
         super().apply(g)
-        g.player_owes_money(self.opponent, self.player, 5)
+        g.player_owes_money(self.target, self.player, 5)
 
 
 @dataclass
@@ -115,11 +133,24 @@ class PassGoAction(DiscardAction):
         g.deal_to(self.player)
 
 
+X = TypeVar("X")
+
+
+def maybe_index(myList: Sequence[X], idx: int, default: X | None = None) -> X | None:
+    try:
+        return myList[idx]
+    except IndexError:
+        return default
+
+
 def generate_actions(
     game: GameProto, player: PlayerProto, actions_left: int
 ) -> list[Action]:
     actions: list[Action] = []
     # opposition = game.get_opposition(player)
+
+    # check whole hand for actions that act on multiple cards
+    dtr = [card for card in player.get_hand() if isinstance(card, DoubleTheRentCard)]
 
     for c in player.get_hand():
         if isinstance(c, PropertyCard):
@@ -133,7 +164,7 @@ def generate_actions(
                         DebtCollectorAction(
                             player=player,
                             card=c,
-                            opponent=op,
+                            target=op,
                         )
                     )
             elif isinstance(c, WildPropertyCard):
@@ -149,12 +180,42 @@ def generate_actions(
             elif isinstance(c, JustSayNoCard):
                 pass
             elif isinstance(c, RentCard):
-                pass
+                for col in c.colours:
+                    ps = player.get_property_sets().get(col)
+                    if ps is None or ps.rent_value() == 0:
+                        continue
+                    actions.append(
+                        RentAction(
+                            player=player,
+                            propertyset=ps,
+                            card=c,
+                            doublerent=maybe_index(dtr, 0),
+                            quadrent=maybe_index(dtr, 1),
+                            target=None,
+                        )
+                    )
+
             elif isinstance(c, RainbowRentCard):
-                pass
+                for col in c.colours:
+                    ps = player.get_property_sets().get(col)
+                    if ps is None or ps.rent_value() == 0:
+                        continue
+                    for t in game.get_opposition(player):
+                        actions.append(
+                            RentAction(
+                                player=player,
+                                propertyset=ps,
+                                card=c,
+                                doublerent=maybe_index(dtr, 0),
+                                quadrent=maybe_index(dtr, 1),
+                                target=t,
+                            )
+                        )
+
             elif isinstance(c, ForcedDealCard):
                 pass
             elif isinstance(c, DoubleTheRentCard):
+                # this is dealt with by the RentCard handler
                 pass
             elif isinstance(c, PassGoCard):
                 actions.append(PassGoAction(player=player, card=c))
