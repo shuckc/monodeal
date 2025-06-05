@@ -106,8 +106,8 @@ When a player does an action:
     RentAction
        card: RentCard | RainbowRentCard
        propertyset: PropertySet (with propertyset.colour in card.colour)
-       doublerent: DoubleTheRentCard|None
-       quadrent: DoubleTheRentCard|None
+       double_rent: DoubleTheRentCard|None
+       quad_rent: DoubleTheRentCard|None
        target: PlayerProto | None
 
     DebtCollector

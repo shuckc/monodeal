@@ -1,7 +1,6 @@
 import copy
 import random
 from collections import Counter, defaultdict, deque
-from enum import Flag, auto
 from itertools import chain, combinations
 from typing import Iterable, Mapping, MutableSequence, Self, Sequence, Tuple
 
@@ -15,6 +14,7 @@ from . import (
     PropertyCard,
     PropertyColour,
     PropertySetProto,
+    Variations,
     WildPropertyCard,
 )
 from .actions import SkipAction, generate_actions
@@ -409,10 +409,6 @@ class Player(PlayerProto):
                     best = pc
         print(f"{self} chose {card} as {best} with rv_incr {rv_incr}")
         return best
-
-
-class Variations(Flag):
-    FORCE_UNPLACED_PROPERTY_AS_CASH = auto()
 
 
 class Game(GameProto):
