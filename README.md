@@ -85,15 +85,12 @@ When a player does an action:
 ```
     SkipAction
 
-    PlayMoney(MoneyCard or ActionCard)
+    DepositAction
+        card: MoneyCard or ActionCard
 
-
-    PlayProperty(PropertyCard or WildPropertyCard or RainbowPropertyCard)
-        existing propertySet or new
-  
-    MoveProperty (does not count as one of 3 actions)
-        existing propertySet index, property index
-        new propertySet index
+    PlayPropertyAction
+        card: PropertyCard, WildPropertyCard, HouseCard, HotelCard
+        colour: PropertyColour
   
     PlayAction
         card: action card or None
@@ -102,31 +99,29 @@ When a player does an action:
     ForcedDeal
         opposing (player, property set, property index)    [not from a complete set]
         your (property set, property index)
+
     SlyDeal
         opposing (player, property set, property index)    [not from a complete set]
-   
-    HouseAction
-        property set that is complete
-    
-    HotelAction
-        property set complete with house
-   
-    CollectRainbowRent
-      opposing player
-      your property set
 
-    CollectRent
-       RentCard
-       your property set (must match one of two flags on card)
+    RentAction
+       card: RentCard | RainbowRentCard
+       propertyset: PropertySet (with propertyset.colour in card.colour)
+       doublerent: DoubleTheRentCard|None
+       quadrent: DoubleTheRentCard|None
+       target: PlayerProto | None
 
     DebtCollector
-    	opposing player
+        card: DebtCollectorCard
+        target: PlayerProto
 
-    ItsMyBirthdayAction
-        card
+    BirthdayAction
+        card: BirthdayCard
 
     DealBreakerAction
         opposing (player, property set)
 
-    JustSayNo action happens ad-hoc?
+    MoveProperty (does not count as one of 3 actions)
+        existing propertySet index, property index
+        new propertySet index
+
 ```
