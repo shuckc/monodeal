@@ -11,6 +11,7 @@ from . import (
     PropertyCard,
     PropertyColour,
     PropertySetProto,
+    Variations,
     WildPropertyCard,
 )
 from .deck import (
@@ -67,21 +68,21 @@ class PlayPropertyAction(Action):
 @dataclass
 class RentAction(DiscardAction):
     propertyset: PropertySetProto
-    doublerent: DoubleTheRentCard | None
-    quadrent: DoubleTheRentCard | None
+    double_rent: DoubleTheRentCard | None
+    quad_rent: DoubleTheRentCard | None
     target: PlayerProto | None
 
     def action_count(self) -> int:
         return (
             1
-            + (0 if self.doublerent is None else 1)
-            + (0 if self.quadrent is None else 1)
+            + (0 if self.double_rent is None else 1)
+            + (0 if self.quad_rent is None else 1)
         )
 
     def apply(self, g: GameProto) -> None:
         rent = self.propertyset.rent_value()
-        rent *= 1 if self.doublerent is None else 2
-        rent *= 1 if self.quadrent is None else 2
+        rent *= 1 if self.double_rent is None else 2
+        rent *= 1 if self.quad_rent is None else 2
         rent_target = (
             [self.target] if self.target is not None else g.get_opposition(self.player)
         )
@@ -90,14 +91,11 @@ class RentAction(DiscardAction):
             g.player_owes_money(p, self.player, rent)
 
         # discard multiple cards
-        s = set([self.card, self.doublerent, self.quadrent])
-        for card in s:
+        for card in [self.card, self.double_rent, self.quad_rent]:
             if card is None:
                 continue
             self.player.get_hand().remove(card)
             g.discard(card)
-
-        return None
 
 
 class DepositAction(DiscardAction):
@@ -136,9 +134,9 @@ class PassGoAction(DiscardAction):
 X = TypeVar("X")
 
 
-def maybe_index(myList: Sequence[X], idx: int, default: X | None = None) -> X | None:
+def maybe_index(items: Sequence[X], idx: int, default: X | None = None) -> X | None:
     try:
-        return myList[idx]
+        return items[idx]
     except IndexError:
         return default
 
@@ -150,7 +148,15 @@ def generate_actions(
     # opposition = game.get_opposition(player)
 
     # check whole hand for actions that act on multiple cards
-    dtr = [card for card in player.get_hand() if isinstance(card, DoubleTheRentCard)]
+    double_rent_cards = [
+        card for card in player.get_hand() if isinstance(card, DoubleTheRentCard)
+    ]
+    double_rent = maybe_index(double_rent_cards, 0)
+    quad_rent = (
+        maybe_index(double_rent_cards, 1)
+        if Variations.ALLOW_QUAD_RENT in game.variations
+        else None
+    )
 
     for c in player.get_hand():
         if isinstance(c, PropertyCard):
@@ -189,8 +195,8 @@ def generate_actions(
                             player=player,
                             propertyset=ps,
                             card=c,
-                            doublerent=maybe_index(dtr, 0),
-                            quadrent=maybe_index(dtr, 1),
+                            double_rent=double_rent,
+                            quad_rent=quad_rent,
                             target=None,
                         )
                     )
@@ -206,8 +212,8 @@ def generate_actions(
                                 player=player,
                                 propertyset=ps,
                                 card=c,
-                                doublerent=maybe_index(dtr, 0),
-                                quadrent=maybe_index(dtr, 1),
+                                double_rent=double_rent,
+                                quad_rent=quad_rent,
                                 target=t,
                             )
                         )

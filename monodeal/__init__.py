@@ -28,6 +28,11 @@ class PropertyColour(Flag):
     )
 
 
+class Variations(Flag):
+    FORCE_UNPLACED_PROPERTY_AS_CASH = auto()
+    ALLOW_QUAD_RENT = auto()
+
+
 class Card:
     def __init__(self, cash: int, name: str):
         self.cash = cash
@@ -100,6 +105,8 @@ class PlayerProto(Protocol):
 
 
 class GameProto(Protocol):
+    variations: Variations
+
     def play(self) -> PlayerProto: ...
     def get_opposition(self, player: PlayerProto) -> Sequence[PlayerProto]: ...
     def player_owes_money(
