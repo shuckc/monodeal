@@ -57,8 +57,6 @@ class PropertySet(PropertySetProto):
         return base
 
     def add_property(self, card: Card) -> Self:
-        # TODO: no hotel or house on utility or stations
-
         if isinstance(card, HouseCard):
             assert self.colour in ALLOWED_BUILDINGS
             assert self.is_complete()
@@ -210,9 +208,6 @@ class Player(PlayerProto):
 
     def get_property_sets(self) -> Mapping[PropertyColour, PropertySetProto]:
         return self.propertysets
-
-    def get_money_set(self) -> MutableSequence[Card]:
-        return self.cash
 
     def has_won(self) -> bool:
         complete_sets, _ = property_cps_rv_without(self.cards_to_ps, [])

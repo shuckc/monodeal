@@ -62,7 +62,7 @@ def test_cash_actions() -> None:
     actions[0].apply(g)
 
     assert p.get_money() == 1
-    assert p.get_money_set() == [m1]
+    assert p.cash == [m1]
     assert len(p.get_hand()) == 0
 
 
