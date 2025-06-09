@@ -1,7 +1,64 @@
+from enum import Flag, auto
 from typing import Sequence
 
-from . import Card, HotelCard, HouseCard, PropertyCard, PropertyColour, WildPropertyCard
-from . import PropertyColour as PC
+
+class PropertyColour(Flag):
+    UTILITY = auto()
+    STATION = auto()
+    BROWN = auto()
+    PALEBLUE = auto()
+    ORANGE = auto()
+    MAGENTA = auto()
+    YELLOW = auto()
+    RED = auto()
+    GREEN = auto()
+    DARKBLUE = auto()
+    ALL = (
+        UTILITY
+        | STATION
+        | BROWN
+        | PALEBLUE
+        | ORANGE
+        | MAGENTA
+        | YELLOW
+        | RED
+        | GREEN
+        | DARKBLUE
+    )
+
+
+class Card:
+    def __init__(self, cash: int, name: str):
+        self.cash = cash
+        self.name = name
+
+    def __repr__(self) -> str:
+        return self.name
+
+
+class PropertyCard(Card):
+    def __init__(self, colour: PropertyColour, name: str, cash: int):
+        self.colour = colour
+        self.property_name = name
+        super().__init__(cash, f"PropertyCard[{colour.name},{name!r}]")
+
+
+class WildPropertyCard(Card):
+    def __init__(self, colours: PropertyColour, cash: int):
+        super().__init__(cash, f"PropertyWildCard[{colours}]")
+        self.colours = colours
+        assert len(colours) > 1  # py3.11+
+
+
+class HouseCard(Card):
+    def __init__(self) -> None:
+        super().__init__(3, "HouseCard")
+
+
+class HotelCard(Card):
+    def __init__(self) -> None:
+        super().__init__(4, "HotelCard")
+
 
 RENTS: dict[PropertyColour, Sequence[int]] = {
     PropertyColour.UTILITY: [1, 2],
@@ -15,6 +72,8 @@ RENTS: dict[PropertyColour, Sequence[int]] = {
     PropertyColour.GREEN: [2, 4, 7],
     PropertyColour.DARKBLUE: [3, 8],
 }
+
+PC = PropertyColour
 
 ALLOWED_BUILDINGS = (
     PC.BROWN

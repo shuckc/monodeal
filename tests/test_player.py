@@ -1,5 +1,10 @@
-from monodeal import PropertyCard, PropertyColour, WildPropertyCard
-from monodeal.deck import PROPERTY_DECK, MoneyCard
+from monodeal.deck import (
+    PROPERTY_DECK,
+    MoneyCard,
+    PropertyCard,
+    PropertyColour,
+    WildPropertyCard,
+)
 from monodeal.game import Player
 
 
