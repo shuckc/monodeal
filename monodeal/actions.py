@@ -131,6 +131,20 @@ class PassGoAction(DiscardAction):
         g.deal_to(self.player)
 
 
+@dataclass
+class DealBreakerAction(DiscardAction):
+    target: PlayerProto
+    propertyset: PropertySetProto
+
+    def apply(self, g: GameProto) -> None:
+        super().apply(g)
+        if g.check_stop_action(self.target, self):
+            return
+        # move cards one by one?
+        self.target.remove_property_set(self.propertyset)
+        self.player.add_property_set(self.propertyset)
+
+
 X = TypeVar("X")
 
 
@@ -226,7 +240,15 @@ def generate_actions(
             elif isinstance(c, PassGoCard):
                 actions.append(PassGoAction(player=player, card=c))
             elif isinstance(c, DealBreakerCard):
-                pass
+                for t in game.get_opposition(player):
+                    for ps in t.get_property_sets().values():
+                        if ps.is_complete():
+                            actions.append(
+                                DealBreakerAction(
+                                    player=player, card=c, target=t, propertyset=ps
+                                )
+                            )
+
             elif isinstance(c, HouseCard):
                 for ps in player.get_property_sets().values():
                     if ps.can_build_house():

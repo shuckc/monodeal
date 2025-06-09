@@ -2,7 +2,7 @@ import copy
 import random
 from collections import Counter, defaultdict, deque
 from itertools import chain, combinations
-from typing import Iterable, Mapping, MutableSequence, Self, Sequence, Tuple
+from typing import Iterable, Iterator, Mapping, MutableSequence, Self, Sequence, Tuple
 
 from . import (
     Action,
@@ -17,8 +17,8 @@ from . import (
     Variations,
     WildPropertyCard,
 )
-from .actions import SkipAction, generate_actions
-from .deck import ALLOWED_BUILDINGS, DECK, RENTS
+from .actions import DealBreakerAction, SkipAction, generate_actions
+from .deck import ALLOWED_BUILDINGS, DECK, RENTS, JustSayNoCard
 
 
 class PropertySet(PropertySetProto):
@@ -29,6 +29,16 @@ class PropertySet(PropertySetProto):
         self.hotel: HotelCard | None = None
         self.house: HouseCard | None = None
         self.rents: Sequence[int] = RENTS[self.colour]
+
+    def __iter__(self) -> Iterator[Card]:
+        for p in self.properties:
+            yield p
+        for w in self.wilds:
+            yield w
+        if self.house:
+            yield self.house
+        if self.hotel:
+            yield self.hotel
 
     def is_complete(self) -> bool:
         if len(self.properties) == 0:
@@ -405,6 +415,39 @@ class Player(PlayerProto):
         print(f"{self} chose {card} as {best} with rv_incr {rv_incr}")
         return best
 
+    def add_property_set(self, propertyset: PropertySetProto) -> None:
+        # we might already have a propertyset for this colour?
+        colour = propertyset.get_colour()
+
+        existing_ps = self.propertysets.get(colour, None)
+        print(existing_ps)
+
+        # incompatible types PropertySetProto/PropertySet
+        # for card in propertyset:
+        #    self.cards_to_ps[card] = propertyset
+
+        # check if property set complete without wilds?
+        # flip wilds over
+        # post wild to property set
+        # might fee up another wild to reallocate
+
+        self.propertysets[propertyset.get_colour()]
+
+    def remove_property_set(self, propertyset: PropertySetProto) -> None:
+        cards_to_remove: set[Card] = set()
+        for card, ps in self.cards_to_ps.items():
+            if ps == propertyset:
+                cards_to_remove.add(card)
+        for c in cards_to_remove:
+            self.cards_to_ps.pop(c)
+        self.propertysets.pop(propertyset.get_colour())
+
+    def should_stop_action(self, action: "Action") -> bool:
+        if isinstance(action, DealBreakerAction):
+            return True
+
+        return False
+
 
 class Game(GameProto):
     def __init__(
@@ -527,6 +570,16 @@ class Game(GameProto):
 
     def discard(self, card: Card) -> None:
         self.discarded.append(card)
+
+    def check_stop_action(self, p: PlayerProto, a: Action) -> bool:
+        stop_cards = [card for card in p.get_hand() if isinstance(card, JustSayNoCard)]
+        if len(stop_cards) > 0:
+            card = stop_cards[0]
+            if p.should_stop_action(a):
+                p.get_hand().remove(card)
+                self.discard(card)
+                return True
+        return False
 
     def audit(self) -> None:
         cards = len(self.discarded) + len(self.draw)

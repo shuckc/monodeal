@@ -1,6 +1,13 @@
-from monodeal import HotelCard, HouseCard, PropertyCard, PropertyColour
+from monodeal import (
+    HotelCard,
+    HouseCard,
+    PropertyCard,
+    PropertyColour,
+    WildPropertyCard,
+)
 from monodeal.actions import (
     BirthdayAction,
+    DealBreakerAction,
     DepositAction,
     PlayPropertyAction,
     generate_actions,
@@ -9,6 +16,7 @@ from monodeal.deck import (
     MONEY_DECK,
     PROPERTY_DECK,
     BirthdayCard,
+    DealBreakerCard,
     MoneyCard,
 )
 from monodeal.game import Game, Player
@@ -138,3 +146,36 @@ def test_property_build_actions() -> None:
     actions[0].apply(g)
     assert len(ps0) == 4
     assert ps0.rent_value() == 10
+
+
+def test_deal_breaker() -> None:
+    p1 = Player("test_winner")
+    p2 = Player("test_winner")
+
+    g = Game([p1, p2])
+
+    pc0 = PropertyCard(PropertyColour.BROWN, "Old Kent Road", 1)
+    pc1 = PropertyCard(PropertyColour.BROWN, "Whitechapel Road", 1)
+    pc2 = PropertyCard(PropertyColour.PALEBLUE, "Pentonville Road", 1)
+    pc3 = PropertyCard(PropertyColour.PALEBLUE, "The Angel, Islington", 1)
+
+    wp0 = WildPropertyCard(PropertyColour.PALEBLUE | PropertyColour.BROWN, 1)
+    wp1 = WildPropertyCard(PropertyColour.STATION | PropertyColour.PALEBLUE, 4)
+    dbc = DealBreakerCard()
+
+    p1.add_property(PropertyColour.PALEBLUE, pc3)
+    p1.add_property(PropertyColour.PALEBLUE, pc2)
+    p1.add_property(PropertyColour.PALEBLUE, wp1)
+    p1.add_property(PropertyColour.BROWN, pc1)
+    p1.deal_card(dbc)
+
+    p2.add_property(PropertyColour.BROWN, pc0)
+    p2.add_property(PropertyColour.BROWN, wp0)
+
+    actions = generate_actions(g, p1, 3)
+    assert len(actions) == 1
+
+    to_steal = p2.get_property_sets()[PropertyColour.BROWN]
+    assert actions == [
+        DealBreakerAction(player=p1, card=dbc, target=p2, propertyset=to_steal)
+    ]
