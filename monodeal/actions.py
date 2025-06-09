@@ -3,30 +3,30 @@ from typing import Sequence, TypeVar
 
 from . import (
     Action,
-    Card,
     GameProto,
-    HotelCard,
-    HouseCard,
     PlayerProto,
-    PropertyCard,
-    PropertyColour,
-    PropertySetProto,
     Variations,
-    WildPropertyCard,
 )
 from .deck import (
     BirthdayCard,
+    Card,
     DealBreakerCard,
     DebtCollectorCard,
     DoubleTheRentCard,
     ForcedDealCard,
+    HotelCard,
+    HouseCard,
     JustSayNoCard,
     MoneyCard,
     PassGoCard,
+    PropertyCard,
+    PropertyColour,
     RainbowRentCard,
     RentCard,
     SlyDealCard,
+    WildPropertyCard,
 )
+from .propertyset import PropertySet
 
 
 @dataclass
@@ -67,7 +67,7 @@ class PlayPropertyAction(Action):
 
 @dataclass
 class RentAction(DiscardAction):
-    propertyset: PropertySetProto
+    propertyset: PropertySet
     double_rent: DoubleTheRentCard | None
     quad_rent: DoubleTheRentCard | None
     target: PlayerProto | None
@@ -134,7 +134,7 @@ class PassGoAction(DiscardAction):
 @dataclass
 class DealBreakerAction(DiscardAction):
     target: PlayerProto
-    propertyset: PropertySetProto
+    propertyset: PropertySet
 
     def apply(self, g: GameProto) -> None:
         super().apply(g)

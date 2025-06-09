@@ -1,10 +1,3 @@
-from monodeal import (
-    HotelCard,
-    HouseCard,
-    PropertyCard,
-    PropertyColour,
-    WildPropertyCard,
-)
 from monodeal.actions import (
     BirthdayAction,
     DealBreakerAction,
@@ -17,7 +10,12 @@ from monodeal.deck import (
     PROPERTY_DECK,
     BirthdayCard,
     DealBreakerCard,
+    HotelCard,
+    HouseCard,
     MoneyCard,
+    PropertyCard,
+    PropertyColour,
+    WildPropertyCard,
 )
 from monodeal.game import Game, Player
 
@@ -148,10 +146,33 @@ def test_property_build_actions() -> None:
     assert ps0.rent_value() == 10
 
 
-def test_deal_breaker() -> None:
-    p1 = Player("test_winner")
-    p2 = Player("test_winner")
+def test_deal_breaker_not_owned() -> None:
+    p1 = Player("P1")
+    p2 = Player("P2")
+    g = Game([p1, p2])
 
+    pc0 = PropertyCard(PropertyColour.BROWN, "Old Kent Road", 1)
+    pc1 = PropertyCard(PropertyColour.BROWN, "Whitechapel Road", 1)
+    dbc = DealBreakerCard()
+
+    p1.deal_card(dbc)
+    p2.add_property(PropertyColour.BROWN, pc0)
+    p2.add_property(PropertyColour.BROWN, pc1)
+
+    to_steal = p2.get_property_sets()[PropertyColour.BROWN]
+    actions = generate_actions(g, p1, 3)
+    assert actions == [
+        DealBreakerAction(player=p1, card=dbc, target=p2, propertyset=to_steal)
+    ]
+
+    actions[0].apply(g)
+    assert p2.get_property_as_cash() == 0
+    assert p1.get_property_as_cash() == 2
+
+
+def test_deal_breaker_ps_merge() -> None:
+    p1 = Player("P1")
+    p2 = Player("P2")
     g = Game([p1, p2])
 
     pc0 = PropertyCard(PropertyColour.BROWN, "Old Kent Road", 1)
@@ -160,22 +181,34 @@ def test_deal_breaker() -> None:
     pc3 = PropertyCard(PropertyColour.PALEBLUE, "The Angel, Islington", 1)
 
     wp0 = WildPropertyCard(PropertyColour.PALEBLUE | PropertyColour.BROWN, 1)
-    wp1 = WildPropertyCard(PropertyColour.STATION | PropertyColour.PALEBLUE, 4)
+    # wp1 = WildPropertyCard(PropertyColour.STATION | PropertyColour.PALEBLUE, 4)
     dbc = DealBreakerCard()
 
     p1.add_property(PropertyColour.PALEBLUE, pc3)
     p1.add_property(PropertyColour.PALEBLUE, pc2)
-    p1.add_property(PropertyColour.PALEBLUE, wp1)
+    # p1.add_property(PropertyColour.PALEBLUE, wp1)
     p1.add_property(PropertyColour.BROWN, pc1)
     p1.deal_card(dbc)
 
     p2.add_property(PropertyColour.BROWN, pc0)
     p2.add_property(PropertyColour.BROWN, wp0)
 
-    actions = generate_actions(g, p1, 3)
-    assert len(actions) == 1
+    assert not p1.get_property_sets()[PropertyColour.PALEBLUE].is_complete()
+    assert not p1.get_property_sets()[PropertyColour.BROWN].is_complete()
 
     to_steal = p2.get_property_sets()[PropertyColour.BROWN]
+    actions = generate_actions(g, p1, 3)
     assert actions == [
         DealBreakerAction(player=p1, card=dbc, target=p2, propertyset=to_steal)
     ]
+
+    actions[0].apply(g)
+
+    assert p1.get_property_sets()[PropertyColour.BROWN].is_complete()
+    assert len(p1.get_property_sets()[PropertyColour.BROWN].wilds) == 0
+
+    # verify PALEBLUE got the wildcard
+    assert p1.get_property_sets()[PropertyColour.PALEBLUE].is_complete()
+
+    # This does not consider cacade
+    # e.g. if PALEBLUE was already complete and pushed out a wildcard

@@ -2,141 +2,27 @@ import copy
 import random
 from collections import Counter, defaultdict, deque
 from itertools import chain, combinations
-from typing import Iterable, Iterator, Mapping, MutableSequence, Self, Sequence, Tuple
+from typing import Iterable, Mapping, MutableSequence, Sequence, Tuple
 
 from . import (
     Action,
-    Card,
     GameProto,
-    HotelCard,
-    HouseCard,
     PlayerProto,
-    PropertyCard,
-    PropertyColour,
-    PropertySetProto,
     Variations,
-    WildPropertyCard,
 )
 from .actions import DealBreakerAction, SkipAction, generate_actions
-from .deck import ALLOWED_BUILDINGS, DECK, RENTS, JustSayNoCard
-
-
-class PropertySet(PropertySetProto):
-    def __init__(self, colour: PropertyColour):
-        self.colour: PropertyColour = colour
-        self.properties: list[PropertyCard] = []
-        self.wilds: list[WildPropertyCard] = []
-        self.hotel: HotelCard | None = None
-        self.house: HouseCard | None = None
-        self.rents: Sequence[int] = RENTS[self.colour]
-
-    def __iter__(self) -> Iterator[Card]:
-        for p in self.properties:
-            yield p
-        for w in self.wilds:
-            yield w
-        if self.house:
-            yield self.house
-        if self.hotel:
-            yield self.hotel
-
-    def is_complete(self) -> bool:
-        if len(self.properties) == 0:
-            if all(w.colours == PropertyColour.ALL for w in self.wilds):
-                return False
-        return len(self.rents) <= len(self.properties) + len(self.wilds)
-
-    def get_colour(self) -> PropertyColour:
-        return self.colour
-
-    def rent_value(self) -> int:
-        # TODO: hotel + house logic
-        card_count = len(self.properties) + len(self.wilds)
-        if card_count == 0:
-            return 0
-        if len(self.properties) == 0:
-            if all(w.colours == PropertyColour.ALL for w in self.wilds):
-                return 0
-        base = self.rents[min(card_count, len(self.rents)) - 1]
-        if not self.is_complete():
-            return base
-        if self.house:
-            base = base + 3
-            if self.hotel:
-                base = base + 5
-        return base
-
-    def add_property(self, card: Card) -> Self:
-        if isinstance(card, HouseCard):
-            assert self.colour in ALLOWED_BUILDINGS
-            assert self.is_complete()
-            assert self.house is None
-            self.house = card
-        elif isinstance(card, HotelCard):
-            assert self.colour in ALLOWED_BUILDINGS
-            assert self.is_complete()
-            assert self.house is not None
-            assert self.hotel is None
-            self.hotel = card
-        elif isinstance(card, PropertyCard):
-            assert card.colour == self.colour
-            self.properties.append(card)
-        elif isinstance(card, WildPropertyCard):
-            assert self.colour in card.colours
-            self.wilds.append(card)
-        else:
-            raise ValueError(card)
-        return self
-
-    def __len__(self) -> int:
-        return (
-            len(self.properties)
-            + len(self.wilds)
-            + (1 if self.house else 0)
-            + (1 if self.hotel else 0)
-        )
-
-    def __repr__(self) -> str:
-        return f"PS({self.colour.name},{len(self.properties) + len(self.wilds)}/{len(self.rents)},{','.join(p.property_name for p in self.properties)},{','.join(p.name for p in self.wilds)},{'+House' if self.house else '-'},{'+Hotel' if self.hotel else '-'})"
-
-    def remove(self, card: Card) -> None:
-        if isinstance(card, HouseCard):
-            assert self.house == card
-            self.house = None
-        elif isinstance(card, HotelCard):
-            assert self.hotel == card
-            self.hotel = None
-        elif isinstance(card, PropertyCard):
-            self.properties.remove(card)
-        elif isinstance(card, WildPropertyCard):
-            self.wilds.remove(card)
-        else:
-            raise ValueError(card)
-
-    def __copy__(self) -> "PropertySet":
-        c = PropertySet(self.colour)
-        for card in self.properties:
-            c.properties.append(card)
-        for wc in self.wilds:
-            c.wilds.append(wc)
-        c.house = self.house
-        c.hotel = self.hotel
-        return c
-
-    def can_build_house(self) -> bool:
-        return (
-            self.is_complete()
-            and self.colour in ALLOWED_BUILDINGS
-            and self.house is None
-        )
-
-    def can_build_hotel(self) -> bool:
-        return (
-            self.is_complete()
-            and self.colour in ALLOWED_BUILDINGS
-            and self.house is not None
-            and self.hotel is None
-        )
+from .deck import (
+    ALLOWED_BUILDINGS,
+    DECK,
+    Card,
+    HotelCard,
+    HouseCard,
+    JustSayNoCard,
+    PropertyCard,
+    PropertyColour,
+    WildPropertyCard,
+)
+from .propertyset import PropertySet
 
 
 def cash_value(cards: Iterable[Card]) -> int:
@@ -216,7 +102,7 @@ class Player(PlayerProto):
     def get_hand(self) -> MutableSequence[Card]:
         return self.hand
 
-    def get_property_sets(self) -> Mapping[PropertyColour, PropertySetProto]:
+    def get_property_sets(self) -> Mapping[PropertyColour, PropertySet]:
         return self.propertysets
 
     def has_won(self) -> bool:
@@ -415,25 +301,47 @@ class Player(PlayerProto):
         print(f"{self} chose {card} as {best} with rv_incr {rv_incr}")
         return best
 
-    def add_property_set(self, propertyset: PropertySetProto) -> None:
+    def add_property_set(self, propertyset: PropertySet) -> None:
         # we might already have a propertyset for this colour?
         colour = propertyset.get_colour()
 
         existing_ps = self.propertysets.get(colour, None)
-        print(existing_ps)
+        if existing_ps is None:
+            print("No existing ps")
+            self.propertysets[colour] = propertyset
+            for card in propertyset:
+                self.cards_to_ps[card] = propertyset
+            return
 
-        # incompatible types PropertySetProto/PropertySet
-        # for card in propertyset:
-        #    self.cards_to_ps[card] = propertyset
+        # merge propertyset properties first, then wildcards
+        for card in propertyset.properties:
+            self.add_property(colour, card)
 
-        # check if property set complete without wilds?
-        # flip wilds over
-        # post wild to property set
-        # might fee up another wild to reallocate
+        for wild in propertyset.wilds:
+            c2 = self.pick_colour_for_recieved_wildcard(wild)
+            self.add_property(c2, wild)
 
-        self.propertysets[propertyset.get_colour()]
+        if propertyset.house is not None:
+            if existing_ps.house is None:
+                self.add_property(colour, propertyset.house)
+            else:
+                c3 = self.pick_colour_for_recieved_building(propertyset.house)
+                if c3:
+                    self.add_property(c3, propertyset.house)
+                else:
+                    self.add_money(propertyset.house)
 
-    def remove_property_set(self, propertyset: PropertySetProto) -> None:
+        if propertyset.hotel is not None:
+            if existing_ps.hotel is None:
+                self.add_property(colour, propertyset.hotel)
+            else:
+                c4 = self.pick_colour_for_recieved_building(propertyset.hotel)
+                if c4:
+                    self.add_property(c4, propertyset.hotel)
+                else:
+                    self.add_money(propertyset.hotel)
+
+    def remove_property_set(self, propertyset: PropertySet) -> None:
         cards_to_remove: set[Card] = set()
         for card, ps in self.cards_to_ps.items():
             if ps == propertyset:

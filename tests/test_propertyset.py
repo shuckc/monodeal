@@ -2,14 +2,14 @@ from copy import copy
 
 import pytest
 
-from monodeal import (
+from monodeal.deck import (
     HotelCard,
     HouseCard,
     PropertyCard,
     PropertyColour,
     WildPropertyCard,
 )
-from monodeal.game import PropertySet
+from monodeal.propertyset import PropertySet
 
 
 def test_property_set() -> None:
