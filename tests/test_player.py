@@ -112,7 +112,7 @@ def test_money_3_1_R() -> None:
         assert cards == exp[amount]
 
 
-def test_money_3_1_R_GG() -> None:
+def test_money_3_1_R_GGG() -> None:
     p = Player("test")
     p.add_money(mc3 := MoneyCard(3))
     p.add_money(mc1 := MoneyCard(1))
@@ -138,10 +138,10 @@ def test_money_3_1_R_GG() -> None:
         5: [mc3, pc1],
         6: [mc3, pc1],
         7: [mc3, mc1, pc1],
-        8: [mc3, mc1, pc4],
+        8: [mc3, mc1, pc2],
         # for 9 is 1GG (cp=-1,rv=-5,op=0,-2) really better than 3RG (cp=-1,rv=-5,op=1,0) ??
-        9: [mc1, pc3, pc4],
-        10: [mc3, pc1, pc4],
+        9: [mc3, pc1, pc2],
+        10: [mc3, pc1, pc2],
     }
     for amount in range(11):
         cards = p.choose_how_to_pay(amount)
