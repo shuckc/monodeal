@@ -159,34 +159,55 @@ class Player(PlayerProto):
         )
 
     def choose_how_to_pay(self, amount: int) -> Sequence[Card]:
-        # if we have bank funds equal to amount, use that
-        total_cash = self.get_money()
-        total_property = self.get_property_as_cash()
-        to_pay = min(total_cash + total_property, amount)
+        # split cards in to bands based on desirability.
+        #  {cash} {unallocated_buildings} {incomplete property} {complete property}
+
+        def filter_property(include_complete: bool) -> Sequence[Card]:
+            cards = []
+            for c, ps in self.cards_to_ps.items():
+                if isinstance(c, WildPropertyCard) and c.colours == PropertyColour.ALL:
+                    continue
+                if ps.is_complete() == include_complete:
+                    cards.append(c)
+            return cards
+
+        bands: list[Sequence[Card]] = [
+            self.cash,
+            self.unallocated_buildings,
+            filter_property(include_complete=False),
+            filter_property(include_complete=True),
+        ]
         print(
-            f"{self} choose_how_to_pay amount={amount} to_pay={to_pay} from {self.cash} and {','.join(str(x) for x in self.cards_to_ps.keys())}"
+            f"{self} choose_how_to_pay amount={amount} bands={list(map(cash_value, bands))}"
         )
-        best: Sequence[Card] = []
-        cards = list(self.cash)
 
-        if to_pay > cash_value(cards):
-            cards.extend(self.unallocated_buildings)
+        # go as deep through the bands as required assuming lower bands completely spent.
+        # on the way back, powerset the deepest band first, and carry any overpayment up to
+        # to the previous.
+        needed_bands: list[tuple[int, Sequence[Card]]] = []
+        still_need = amount
+        for band in bands:
+            if still_need < 0:
+                break
+            needed_bands.append((min(still_need, cash_value(band)), band))
+            still_need -= cash_value(band)
 
-        # if we can pay this amount without dipping into property, do so
-        # since it makes the powerset much smaller
-        for include_complete in False, True:
-            if to_pay > cash_value(cards):
-                print(f"including complete: {include_complete}")
-                for c, ps in self.cards_to_ps.items():
-                    if (
-                        isinstance(c, WildPropertyCard)
-                        and c.colours == PropertyColour.ALL
-                    ):
-                        continue
-                    if ps.is_complete() == include_complete:
-                        cards.append(c)
+        # now work from most desired out, powersetting for any slack
+        needed_bands.reverse()
+        certain_cards: list[Card] = []
+        slack = 0
+        for amt, band in needed_bands:
+            cs = self._choose_how_to_pay(amt - slack, band)
+            certain_cards = [*cs, *certain_cards]
+            slack = cash_value(cs) - (amt - slack)
+            assert slack >= 0
 
-        assert len(set(cards)) == len(cards)
+        return certain_cards
+
+    def _choose_how_to_pay(self, amount: int, cards: Sequence[Card]) -> Sequence[Card]:
+        # we are handing over everything, shortcut the eval
+        if amount >= cash_value(cards):
+            return cards
 
         # iterate over the powerset evaluating a metric for each
         # solution with an overpay >= 0
@@ -204,6 +225,7 @@ class Player(PlayerProto):
         # order of cards does not matter
 
         # baseline metrics, with all player's cards
+        best: Sequence[Card] = []
         sc_orig = smallest_cash_remaining_without(cards, [])
         cps_orig, rv_orig = property_cps_rv_without(self.cards_to_ps, [])
 
@@ -212,7 +234,7 @@ class Player(PlayerProto):
 
         for cs in card_powerset(cards):
             cv = cash_value(cs)
-            overpay = cv - to_pay
+            overpay = cv - amount
             if overpay < 0:
                 continue
 
@@ -239,7 +261,7 @@ class Player(PlayerProto):
                 f"{self} scored {cs} with cv={cv} overpayment={overpay} as {score} vs. least {least_score}"
             )
 
-            if score <= least_score:
+            if score < least_score:
                 print(f" ** improves score {score} < {least_score}")
 
                 # OK candidate
@@ -249,7 +271,7 @@ class Player(PlayerProto):
                 if overpay == 0 and sc == sc_orig and rv == rv_orig and cps == cps_orig:
                     break
         print(
-            f"{self} choose_how_to_pay() solver for {amount} (to_pay={to_pay}) chose {best} with ps,rv,overpay,sr={least_score}"
+            f"{self} choose_how_to_pay() solver for {amount} chose {best} with ps,rv,overpay,sr={least_score}"
         )
         return list(best)
 
@@ -511,7 +533,7 @@ class RandomPlayer(Player):
 if __name__ == "__main__":
     winners: Counter[str] = Counter()
 
-    for i in range(100):
+    for i in range(200):
         a: Player = ConsolePlayer("A")
         b: Player = RandomPlayer("B")
         g: Game = Game(
