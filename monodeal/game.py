@@ -145,6 +145,8 @@ class Player(PlayerProto):
         elif isinstance(card, HouseCard) or isinstance(card, HotelCard):
             if card in self.unallocated_buildings:
                 self.unallocated_buildings.remove(card)
+            else:
+                self.cash.remove(card)
         else:
             self.cash.remove(card)
 
