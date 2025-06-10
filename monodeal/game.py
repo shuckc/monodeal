@@ -324,7 +324,7 @@ class Player(PlayerProto):
             self.add_property(c2, wild)
 
         if propertyset.house is not None:
-            if existing_ps.house is None:
+            if existing_ps.can_build_house():
                 self.add_property(colour, propertyset.house)
             else:
                 c3 = self.pick_colour_for_recieved_building(propertyset.house)
@@ -334,7 +334,7 @@ class Player(PlayerProto):
                     self.add_money(propertyset.house)
 
         if propertyset.hotel is not None:
-            if existing_ps.hotel is None:
+            if existing_ps.can_build_hotel():
                 self.add_property(colour, propertyset.hotel)
             else:
                 c4 = self.pick_colour_for_recieved_building(propertyset.hotel)
@@ -465,12 +465,13 @@ class Game(GameProto):
             elif isinstance(c, HouseCard) or isinstance(c, HotelCard):
                 optional_colour = to_player.pick_colour_for_recieved_building(c)
                 if optional_colour is not None:
-                    to_player.add_property(colour, c)
+                    to_player.add_property(optional_colour, c)
                 else:
                     # VARIATION: where to store unallocated house/hotel?
                     # storing in unallocated will trigger
                     # calls to player.pick_colour_for_recieved_building() later
                     if Variations.FORCE_UNPLACED_PROPERTY_AS_CASH in self.variations:
+                        print(f"cash: unplaced property becomes cash {c}")
                         to_player.add_money(c)
                     else:
                         to_player.add_unallocated_building(c)
